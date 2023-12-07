@@ -1,0 +1,182 @@
+.footer {
+    background-color: #fff;
+
+    @include tablet {
+        background-color: #fff;
+    }
+    @include mobile {
+        background-color: #fff;
+    }
+    
+    &__content {
+        padding-top: 2rem;
+        @include flex(flex-start,flex-start);
+        flex-wrap: wrap;
+
+        &__item {
+            width: 25%;
+            padding: 0 15px;
+
+            ul {
+                margin-bottom: 1rem;
+                font-size: 14px;
+
+                a:hover {
+                    color: $-a-hover-color;
+                }
+
+                h6 {
+                    font-size: 1rem;
+                    margin-bottom: 8px;
+                    text-transform: uppercase;
+                }
+
+                .share {
+                    @include flex(flex-start,flex-start);
+                }
+
+                .hotline {
+                    background-color: #2b80dd;
+                    color: #fff;
+                    text-transform: uppercase;
+                    @include flex(center,flex-start);
+                }
+
+                li {
+                    margin-bottom: 6px;
+
+                    .fa-facebook-f {
+                        color: white;
+                        background: #1877f2;
+                        padding: 10px;
+                        border-radius: 50%;
+                        font-size: 20px;
+                        margin-right: 10px;
+                        width: 40px;
+                        text-align: center;
+                    }
+
+                    .fa-youtube {
+                        background: red;
+                        color: white;
+                        padding: 11px 10px;
+                        border-radius: 50%;
+                        margin-right: 10px;
+                    }
+
+                    .fa-tiktok {
+                        background: black;
+                        color: white;
+                        padding: 11px 10px;
+                        border-radius: 50%;
+                        width: 37px;
+                        text-align: center;
+                    }
+
+                    .fa-phone-volume {
+                        padding: 16px;
+                        font-size: 30px;
+                    }
+                }
+            }
+
+            @include tablet {
+                width: 100%;
+                padding: 10px 5px;
+            }
+            @include mobile {
+                width: 100%;
+                padding: 10px 5px;
+            }
+        }
+
+        &__line {
+            width: 100%;
+            margin: 25px 0 10px 0;
+            border: 1px dashed #d0d0d0;
+        }
+
+        &__title {
+            font-size: 14px;
+            width: 100%;
+            text-align: center;
+        }
+
+        @include tablet {
+            padding-top: 0;
+            flex-direction: column;
+
+            .thong-tin, .chinh-sach {
+                display: none;
+            }
+
+            .cua-hang-1 {
+                order: 1;
+            }
+
+            .cua-hang-2 {
+                order: 2;
+            }
+
+            .cong-ty-tnhh {
+                order: 3;
+            }
+
+            .hot-line {
+                order: 4;
+                ul {
+                    margin-bottom: 0;
+                }
+                li {
+                    margin-bottom: 0;
+                }
+            }
+
+            &__line {
+                display: none;
+            }
+
+            &__title {
+                display: none;
+            }
+        }
+        @include mobile {
+            padding-top: 0;
+            flex-direction: column;
+
+            .thong-tin, .chinh-sach {
+                display: none;
+            }
+
+            .cua-hang-1 {
+                order: 1;
+            }
+
+            .cua-hang-2 {
+                order: 2;
+            }
+
+            .cong-ty-tnhh {
+                order: 3;
+            }
+
+            .hot-line {
+                order: 4;
+                ul {
+                    margin-bottom: 0;
+                }
+                li {
+                    margin-bottom: 0;
+                }
+            }
+
+            &__line {
+                display: none;
+            }
+
+            &__title {
+                display: none;
+            }
+        }
+    }
+}

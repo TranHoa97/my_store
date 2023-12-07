@@ -1,0 +1,26 @@
+.breadcrumb {
+    font-size: 12px;
+    padding-bottom: 20px;
+    @include flex(flex-start, flex-start);
+    flex-wrap: nowrap;
+
+    a {
+        white-space: nowrap;
+    }
+
+    &__item {
+        color: #505050;
+        white-space: nowrap;
+
+        &:hover {
+            a {
+                color: #2b80dd;
+            }
+        }
+
+        span {
+            padding: 0 10px;
+        }
+    }
+
+}

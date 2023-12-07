@@ -1,0 +1,117 @@
+.cart-item {
+    padding: 16px;
+    border-radius: 6px;
+    background-color: #fff;
+    @include flex(flex-start, space-between);
+    column-gap: 20px;
+
+    &__image {
+        width: 20%;
+        padding: 4px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+    }
+
+    &__info {
+        width: 80%;
+        &__header {
+            font-size: 18px;
+            font-weight: 600;
+            color: #020b27;
+            @include flex(flex-start, space-between);
+
+            i {
+                cursor: pointer;
+                color: #4a4f63;
+            }
+        }
+
+        &__footer {
+            margin-top: 10px;
+            @include flex(flex-start, space-between);
+            p {
+                font-size: 16px;
+                color: #4a4f63;
+                margin-bottom: 5px;
+            }
+            span {
+                font-weight: 600;
+            }
+
+            &__left {
+                @include flex(flex-start,center);
+                column-gap: 20px;
+
+                select {
+                    border: 1px solid #e4e8ed;
+                    border-radius: 6px;
+                    outline: none;
+                    height: 36px;
+                    padding: 0 10px;
+                    cursor: pointer;
+                }
+            }
+
+            &__quantity {
+                @include flex(center, center);
+
+                &__minus,&__plus {
+                    width: 36px;
+                    height: 36px;
+                    background-color: #fff;
+                    border: 1px solid #e4e8ed;
+                    transition: all .3s;
+                    cursor: pointer;
+
+                    &:hover {
+                        background-color: #ccc;
+                    }
+                }
+
+                &__minus {
+                    border-radius: 34px 0 0 34px;
+                }
+
+                &__plus {
+                    border-radius: 0 34px 34px 0;
+                }
+
+                &__value {
+                    border: 1px solid #e4e8ed;
+                    max-width: 40px;
+                    width: 40px;
+                    line-height: 36px;
+                    height: 36px;
+                    text-align: center;
+                    font-size: 16px;
+                    border-left: none;
+                    border-right: none;
+                }
+            }
+
+            &__price {
+                color: #cb1c22;
+                font-size: 20px;
+                font-weight: 600;
+            }
+        }
+    }
+
+    @include tablet {
+        &__info {
+            &__footer {
+                flex-wrap: wrap;
+                row-gap: 10px;
+            }
+        }
+    }
+
+    @include mobile {
+        &__info {
+            &__footer {
+                flex-wrap: wrap;
+                row-gap: 10px;
+            }
+        }
+    }
+}

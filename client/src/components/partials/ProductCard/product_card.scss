@@ -1,0 +1,114 @@
+.product-card {
+    padding: 12px;
+    border: solid 1px #fff;
+    transition: all .3s;
+
+    &:hover {
+        border-radius: 6px;
+        border: solid 1px #dee2e6;
+        box-shadow: 0 0 2px 0 #dee2e6;
+    }
+
+    &:hover &__image {
+        transform: scale(1.03);
+    }
+
+    &:hover &__btn {
+        visibility: visible;
+    }
+
+    &__image {
+        margin-bottom: 16px;
+        transition: all .3s;
+        @include flex(center, center);
+    }
+    &__title {
+        margin-bottom: 10px;
+        font-weight: 600;
+        min-height: 50px;
+        font-size: 16px;
+        a {
+            word-break: break-word;
+            text-overflow: ellipsis;
+            color: #474c51;
+            &:hover {
+                color: #0168fa;
+            }
+        }
+    }
+    &__price {
+        font-size: 18px;
+        font-weight: 700;
+        color: #cb1c22;
+        margin-bottom: 10px;
+    }
+    &__info {
+        color: #6c757d;
+        padding-bottom: 20px;
+        @include flex(flex-start, flex-start);
+        flex-wrap: wrap;
+        gap: 9px;
+        span {
+            text-transform: capitalize;
+        }
+        i {
+            margin-right: 8px;
+        }
+    }
+    &__btn {
+        visibility: hidden;
+        font-size: 16px;
+        font-weight: 500;
+        text-align: center;
+        padding: 5px 0;
+        background: #cb1c22;
+        text-transform: uppercase;
+        border-radius: 4px;
+
+        a {
+            color: #fff;
+        }
+
+        &:hover {
+            background-color: #ae1427;
+        }
+    }
+    &__variants {
+        @include flex(center,flex-start);
+
+        &__item {
+            margin-bottom: 10px;
+            padding: 6px 6px;
+            color: #555555;
+            width: 100%;
+            text-align: center;
+            border-radius: 6px;
+            background-color: #e9ecef;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+
+            &:hover {
+                color: #fff;
+                background-color: #212529;
+            }
+        }
+
+        .active {
+            color: #fff;
+            background-color: #212529;
+        }
+    }
+
+    @include tablet {
+        &__btn {
+            display: none;
+        }
+    }
+
+    @include mobile {
+        &__btn {
+            display: none;
+        }
+    }
+}
