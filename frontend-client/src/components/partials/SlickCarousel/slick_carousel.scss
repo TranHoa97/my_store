@@ -1,0 +1,85 @@
+.slick-carousel {
+    position: relative;
+    cursor: pointer;
+
+    &__prevBtn, &__nextBtn {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 48px;
+        height: 48px;
+        text-align: center;
+        border: 1px solid #a7a7b1;
+        border-radius: 50%;
+        background-color: #fff;
+        padding: 6px;
+        color: #6c757d;
+        font-size: 25px;
+        opacity: .75;
+
+        &:hover {
+            opacity: 1;
+            cursor: pointer;
+        }
+    }
+
+    &__prevBtn {
+        left: 10px;
+        z-index: 1;
+    }
+
+    &__nextBtn {
+        right: 10px;
+    }
+
+    &__main {
+        ul {
+            bottom: 10px;
+            li {
+                margin: 0 0;
+                button {
+                    &::before {
+                        font-size: 9px;
+                        color: #ccc;
+                        opacity: 1;
+                    }
+                }
+            }
+        }
+    
+        .slick-dots .slick-active {
+            button::before {
+                font-size: 9px;
+                color: #ec1c24;
+                opacity: 1;
+            }
+        }
+    }
+
+    &__sub {
+        margin-top: 20px;
+        img {
+            width: 70%;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        .slick-list .slick-current img{
+            border: 1px solid #ccc;
+            box-shadow: 0 0 6px 0 rgba(0,0,0,.1);
+        }
+
+    }
+
+    @include tablet {
+        &__prevBtn, &__nextBtn {
+            display: none;
+        }
+    }
+
+    @include mobile {
+        &__prevBtn, &__nextBtn {
+            display: none;
+        }
+    }
+}

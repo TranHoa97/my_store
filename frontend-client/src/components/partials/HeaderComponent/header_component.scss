@@ -1,0 +1,192 @@
+.header {
+    position: relative;
+
+    &__top {
+        background-color: #2b80dd;
+
+        &__box {
+            color: #fff;
+            padding: 15px 0;
+            @include flex(center, space-between);
+        }
+
+        &__search {
+            position: relative;
+            width: 50%;
+            height: 40px;
+        }
+
+        &__hotline,
+        &__cart {
+            i {
+                font-size: 15px;
+                margin-right: 8px;
+            }
+        }
+
+        &__cart {
+            white-space: nowrap;
+            cursor: pointer;
+
+            a {
+                color: #fff;
+            }
+        }
+
+        &__menu {
+            display: none;
+        }
+    }
+
+    &__nav {
+        background-color: #fff;
+        box-shadow: 0 0 5px #0003;
+
+        &__box {
+            padding: 10px 0;
+            @include flex(center, space-between);
+        }
+
+        &__item {
+            width: 10%;
+            margin: 0 20px;
+
+            a {
+                text-transform: capitalize;
+                @include flex(center, center);
+                flex-direction: column;
+                row-gap: 5px;
+
+                &:hover {
+                    color: $-a-hover-color;
+                }
+            }
+
+            img {
+                width: 25px;
+            }
+        }
+    }
+
+    &__box {
+        position: relative;
+        width: 100%;
+        z-index: 99;
+    }
+
+    &__menu {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 999;
+        visibility: hidden;
+
+        &__over {
+            overflow: hidden;
+            background: rgba(0,0,0,.6);
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            opacity: .5;
+        }
+    }
+
+    .active {
+        visibility: visible;
+    }
+
+    @include tablet {
+        &__top {
+            padding: 0 20px;
+
+            &__box {
+                flex-wrap: wrap;
+                row-gap: 5px;
+            }
+
+            &__menu {
+                font-size: 20px;
+                display: block;
+            }
+
+            &__brand {
+                width: 50%;
+            }
+
+            &__hotline {
+                display: none;
+            }
+
+            &__search {
+                order: 5;
+                width: 100%;
+            }
+
+            &__cart {
+                span {
+                    display: none;
+                }
+            }
+        }
+
+        &__nav {
+            display: none;
+        }
+    }
+
+    @include mobile {
+        &__top {
+            padding: 0 20px;
+
+            &__box {
+                flex-wrap: wrap;
+                row-gap: 5px;
+            }
+
+            &__menu {
+                font-size: 20px;
+                display: block;
+            }
+
+            &__brand {
+                width: 50%;
+            }
+
+            &__hotline {
+                display: none;
+            }
+
+            &__search {
+                order: 5;
+                width: 100%;
+            }
+
+            &__cart {
+                span {
+                    display: none;
+                }
+            }
+        }
+
+        &__nav {
+            display: none;
+        }
+    }
+
+}
+
+.over-suggest {
+    position: fixed;
+    right: 0;
+    left: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, .7);
+    width: 100%;
+    height: 100%;
+    transition: all .3s;
+    z-index: 98;
+}

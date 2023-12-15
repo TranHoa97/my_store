@@ -1,0 +1,25 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700&display=swap');
+@import './variables';
+@import './mixins';
+@import './base';
+
+// partials
+@import "../components/partials/HeaderComponent/header_component.scss";
+@import "../components/partials/FooterComponent/footer_component.scss";
+@import "../components/partials/SlickCarousel/slick_carousel.scss";
+@import "../components/partials/ProductCard/product_card.scss";
+@import "../components/partials/BreadCrumb/breadcrumb.scss";
+@import "../components/partials/ProductView/product_view.scss";
+@import "../components/partials/CheckBox/checkbox.scss";
+@import "../components/partials/CartItem/cart_item.scss";
+@import "../components/partials/FormOrder/form_order.scss";
+@import "../components//partials/Search/search.scss";
+@import "../components/partials/MobileMenu/mobile_menu.scss";
+
+// pages
+@import "../pages/HomePage/home_page.scss";
+@import "../pages/ProductPage/product_page.scss";
+@import "../pages/CartPage/cart_page.scss";
+@import "../pages/CollectionsPage/collections_page.scss";
+@import "../pages/SearchPage/search_page.scss";
+

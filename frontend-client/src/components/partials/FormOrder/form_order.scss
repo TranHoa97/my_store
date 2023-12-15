@@ -1,0 +1,109 @@
+.form-order {
+    width: 100%;
+    background-color: #fff;
+    padding: 10px;
+    border-radius: 4px;
+
+    &__title {
+        color: #020b27;
+        font-weight: 600;
+        font-size: 20px;
+        margin-bottom: 16px;
+    }
+
+    form {
+        @include flex(flex-start,center);
+        column-gap: 30px;
+    }
+
+    &__content {
+        width: 80%;
+        @include flex(flex-start,center);
+        flex-direction: column;
+        row-gap: 10px;
+
+        &__item {
+            width: 100%;
+            input {
+                width: 100%;
+                margin-bottom: 5px;
+                border-radius: 8px;
+                border: 1px solid #c1c8d1;
+                padding: 6px;
+                font-size: 16px;
+                font-weight: 400;
+                line-height: 24px;
+                letter-spacing: .005em;
+            }
+    
+            label {
+                visibility: hidden;
+                color: #cb1c22;
+            }
+    
+            .active {
+                visibility: visible;
+            }
+        }
+    }
+
+    &__btn {
+        width: 50%;
+        font-size: 16px;
+        @include flex(flex-end,center);
+        flex-direction: column;
+
+        span {
+            color: #cb1c22;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        button {
+            width: 100%;
+            display: block;
+            background-color: #cb1c22;
+            color: #fff;
+            border: none;
+            padding: 12px 24px;
+            font-weight: 600;
+            font-size: 16px;
+            border-radius: 6px;
+            margin-top: 10px;
+            transition: all .3s;
+            cursor: pointer;
+
+            &:hover {
+                background-color: #333;
+            }
+        }
+    }
+
+    @include tablet {
+        form {
+            @include flex(flex-start,flex-start);
+            row-gap: 10px;
+            flex-wrap: wrap;
+        }
+        &__content {
+            width: 100%;
+        }
+        &__btn {
+            width: 100%;
+        }
+    }
+
+    @include mobile {
+        form {
+            @include flex(flex-start,flex-start);
+            row-gap: 10px;
+            flex-wrap: wrap;
+        }
+        &__content {
+            width: 100%;
+        }
+        &__btn {
+            width: 100%;
+        }
+    }
+}

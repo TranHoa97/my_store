@@ -1,0 +1,38 @@
+.checkbox {
+    text-transform: capitalize;
+    cursor: pointer;
+    @include flex(center, flex-start);
+
+    input {
+        position: absolute;
+        opacity: 0;
+        height: 0;
+        width: 0;
+    }
+
+    &__checkmark {
+        margin-right: 10px;
+        height: 15px;
+        width: 15px;
+        text-align: center;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        @include flex(center,center);
+
+        i {
+            font-size: 12px;
+            transform: scale(0);
+            transition: transform 0.3s ease;
+        }
+    }
+
+    input:checked ~ &__checkmark {
+        background-color: #cb1c22;
+        border: 1px solid #cb1c22;
+        color: #fff;
+    }
+
+    input:checked ~ &__checkmark > i {
+        transform: scale(1);
+    }
+}

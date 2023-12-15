@@ -1,0 +1,48 @@
+.mobile-menu {
+    position: absolute;
+    left: -330px;
+    transition: all .3s ease;
+    width: 330px;
+    height: 100%;
+    background: #fff;
+    z-index: 999;
+    box-shadow: 0 0 15px rgba(0,0,0,.5);
+
+    &__top {
+        background-color: #2b80dd;
+        color: #fff;
+        padding: 10px; 
+        @include flex(center,space-between);
+
+        &__brand {
+            width: 50%;
+        }
+
+        &__close {
+            font-size: 20px;
+        }
+    }
+
+    ul {
+        li {
+            a {
+                padding: 10px;
+                text-transform: capitalize;
+                border-bottom: 1px solid #ccc;
+                @include flex(center,center);
+                column-gap: 10px;
+
+                img {
+                    width: 5%;
+                }
+                p {
+                    width: 95%;
+                }
+            }
+        }
+    }
+}
+
+.active {
+    left: 0;
+}

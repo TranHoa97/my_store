@@ -1,0 +1,9 @@
+version: '3.8'
+services:
+  nginx:
+    build:
+     context: .
+    ports:
+      - 5173:80
+    volumes:
+      - ../../frontend-admin/dist:/usr/share/nginx/html

@@ -1,0 +1,20 @@
+.other-products {
+    margin-top: 20px;
+    border-radius: 4px;
+    background-color: #fff;
+    // padding: 6px;
+
+    &__title {
+        padding: 10px 10px;
+        margin-bottom: 16px;
+        border-bottom: 1px solid #dee2e6;
+        font-weight: 600;
+        color: #212529;
+        font-size: 20px;
+        text-transform: uppercase;
+    }
+
+    &__content {
+        padding: 0 10px 10px 10px;
+    }
+}
