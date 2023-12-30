@@ -1,21 +1,21 @@
 import express from "express"
 import variantsController from "../controller/variantController"
-import auth from "../middleware/auth"
+import { checkUserJwt, checkUserPermisson } from "../middleware/auth"
 
 const router = express.Router()
 
 const variantRoute = (app) => {
     // GET
-    router.get("/read", auth.checkUserJwt, auth.checkUserPermisson, variantsController.getVariants)
+    router.get("/read", checkUserJwt, checkUserPermisson, variantsController.getVariants)
 
     // CREATE
-    router.post("/create", auth.checkUserJwt, auth.checkUserPermisson, variantsController.createVariants)
+    router.post("/create", checkUserJwt, checkUserPermisson, variantsController.createVariants)
     
     // UPDATE
-    router.put("/update", auth.checkUserJwt, auth.checkUserPermisson, variantsController.updateVariants)
+    router.put("/update", checkUserJwt, checkUserPermisson, variantsController.updateVariants)
     
     // DELETE
-    router.delete("/delete", auth.checkUserJwt, auth.checkUserPermisson, variantsController.deleteVariants)
+    router.delete("/delete", checkUserJwt, checkUserPermisson, variantsController.deleteVariants)
 
     return app.use("/variants", router)
 }

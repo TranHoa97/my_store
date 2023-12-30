@@ -136,6 +136,24 @@
             font-weight: 600;
         }
     }
+
+    @include tablet {
+        &__order-results {
+    
+            p {
+                font-size: 25px;
+            }
+        }
+    }
+    @include mobile {
+        &__order-results {
+    
+            p {
+                font-size: 25px;
+            }
+        }
+    }
+
 }
 
 @keyframes rotating {

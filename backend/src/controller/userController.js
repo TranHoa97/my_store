@@ -6,28 +6,45 @@ const dbName = process.env.DB_DATABASE_NAME
 const userController = {
     getUsers: async (req, res) => {
         try {
-            const { group, search } = req.query
+            const { group, search, page, limit } = req.query
 
             let sql = `select 
             user.*, ${dbName}.group.label as group_name 
             from user
             left join ${dbName}.group on user.group_id = ${dbName}.group.id
-            where user.id > 0`
+            where user.id is not null`
+
+            let sqlTotal = `select count(*) as count from user where id is not null`
 
             if(group) {
                 sql += ` and user.group_id = ${group}`
+                sqlTotal += ` and group_id= ${group}`
             }
 
             if(search) {
-                const newSearch = search.toLowerCase().replaceAll("-", " ")
-                sql += ` and (user.username like "%${newSearch}%" 
-                or user.email like "%${newSearch}%"
-                or user.phone like "%${newSearch}%")`
+                sql += ` and (user.username like "%${search}%" 
+                or user.email like "%${search}%"
+                or user.phone like "%${search}%")`
+
+                sqlTotal += ` and (user.username like "%${search}%" 
+                or user.email like "%${search}%"
+                or user.phone like "%${search}%")`
             }
 
-            sql += ` order by user.group_id asc`
+            sql += ` order by user.id asc`
+
+            if(limit) {
+                sql += ` limit ${limit}`
+            }
+
+            if(page) {
+                const offset = (page - 1) * limit
+                sql += ` offset ${offset}`
+            }
             
             const [users] = await db.execute(sql)
+
+            const [totalUser] = await db.execute(sqlTotal)
 
             const results = users.map(item => {
                 const {password, ...others} = item
@@ -37,8 +54,16 @@ const userController = {
             return res.status(200).json({
                 st: 1,
                 msg: "Get users successfully!",
-                data: results.length > 0 ? results : []
+                data: {
+                    data: results.length > 0 ? results : [],
+                    pagination: {
+                        page: +page,
+                        limit: +limit,
+                        total: +(totalUser[0]?.count),
+                    }
+                }
             })
+
         } catch (err) {
             return res.status(500).json({
                 st: 0,
@@ -137,25 +162,25 @@ const userController = {
             if (user && username === user.username) {
                 return res.status(200).json({
                     st: 0,
-                    msg: "Tên người dùng đã tồn tại!"
+                    msg: "Username is exist!"
                 })
             }
             if (user && email === user.email) {
                 return res.status(200).json({
                     st: 0,
-                    msg: "Email đã tồn tại!"
+                    msg: "Email is exist!"
                 })
             }
             if (user && phone === user.phone) {
                 return res.status(200).json({
                     st: 0,
-                    msg: "Số điện thoại đã tồn tại!"
+                    msg: "Phone number is exist!"
                 })
             }
             if (password && password.length < 8) {
                 return res.status(200).json({
                     st: 0,
-                    msg: "Mật khẩu phải dài hơn 8 ký tự!"
+                    msg: "Password must 8 text or more!"
                 })
             }
 

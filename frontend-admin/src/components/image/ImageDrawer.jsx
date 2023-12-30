@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useDispatch } from 'react-redux'
+import { useLocation, useSearchParams } from 'react-router-dom'
 import { Space, Button, Form, Input, Upload, Drawer } from 'antd'
 import { UploadOutlined } from '@ant-design/icons'
 
@@ -10,7 +11,11 @@ import { openNotification } from '../../redux/slice/notificationSlice'
 const ImageDrawer = (props) => {
 
     const dispatch = useDispatch()
+    const location = useLocation()
     const [form] = Form.useForm()
+    const [searchParams, setSearchParams] = useSearchParams()
+    const page = searchParams.get("page")
+    const limit = searchParams.get("limit")
 
     const [fileList, setFileList] = useState([])
     const [isFetching, setIsFetching] = useState(false)
@@ -37,42 +42,52 @@ const ImageDrawer = (props) => {
 
     const handlePostData = async (values) => {
         // console.log(values);
-        setIsFetching(true)
-        const formData = new FormData()
-
-        if (props.action === "create") {
-            formData.append("image", values.image.file)
-            formData.append("product_id", values.product_id)
-            const res = await imageApi.createImage(formData)
-            if (res.st === 1) {
-                dispatch(openNotification(
-                    { type: "success", message: res.msg, duration: 2, open: true }
-                ))
-                props.onClose()
-                setIsFetching(false)
-                await getImagesByFilter(dispatch)
+        try {
+            const formData = new FormData()
+            setIsFetching(true)
+            if (props.action === "create") {
+                formData.append("image", values.image.file)
+                formData.append("product_id", values.product_id)
+                const res = await imageApi.createImage(formData)
+                if (res.st === 1) {
+                    dispatch(openNotification(
+                        { type: "success", message: res.msg, duration: 2, open: true }
+                    ))
+                    props.onClose()
+                    setIsFetching(false)
+                    if(+page === 1) {
+                        await getImagesByFilter(dispatch, `?page=1&limit=${limit}`)
+                    } else {
+                        setSearchParams({ page: 1, limit: 4 })
+                    }
+                } else {
+                    setIsFetching(false)
+                    dispatch(openNotification(
+                        { type: "error", message: res.msg, duration: 2, open: true }
+                    ))
+                }
             } else {
-                setIsFetching(false)
-                dispatch(openNotification(
-                    { type: "error", message: res.msg, duration: 2, open: true }
-                ))
+                formData.append("image", values.image.file)
+                const res = await imageApi.updateImage(props.data.id, props.data.title, formData)
+                if (res.st === 1) {
+                    dispatch(openNotification(
+                        { type: "success", message: res.msg, duration: 2, open: true }
+                    ))
+                    props.onClose()
+                    setIsFetching(false)
+                    await getImagesByFilter(dispatch, location.search ? location.search : `?page=1&limit=${props.limit}`)
+                } else {
+                    setIsFetching(false)
+                    dispatch(openNotification(
+                        { type: "error", message: res.msg, duration: 2, open: true }
+                    ))
+                }
             }
-        } else {
-            formData.append("image", values.image.file)
-            const res = await imageApi.updateImage(props.data.id, props.data.title, formData)
-            if (res.st === 1) {
-                dispatch(openNotification(
-                    { type: "success", message: res.msg, duration: 2, open: true }
-                ))
-                props.onClose()
-                setIsFetching(false)
-                await getImagesByFilter(dispatch)
-            } else {
-                setIsFetching(false)
-                dispatch(openNotification(
-                    { type: "error", message: res.msg, duration: 2, open: true }
-                ))
-            }
+        } catch(err) {
+            setIsFetching(false)
+            dispatch(openNotification(
+                { type: "error", message: "Something wrong!", duration: 2, open: true }
+            ))
         }
     }
 
@@ -82,13 +97,14 @@ const ImageDrawer = (props) => {
             setFileList([])
         } else {
             if(props.data) {
+                const { product_id, id, title, url } = props.data
                 form.setFieldsValue({
-                    product_id: props.data.product_id
+                    product_id: product_id
                 })
                 setFileList([{
-                    uuid: props.data.id,
-                    name: props.data.title,
-                    url: props.data.url,
+                    uuid: id,
+                    name: title,
+                    url: url,
                     status: "done"
                 }])
             }

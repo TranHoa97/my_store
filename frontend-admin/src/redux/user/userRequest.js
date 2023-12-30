@@ -8,13 +8,20 @@ import {
 
 export const getUsersByFilter = async (dispatch, query) => {
     dispatch(getUserStart())
-    const res = await userApi.getUserByFilter(query)
-    if(res.st === 1) {
-        dispatch(getUserSuccess(res.data))
-    } else {
+    try {
+        const res = await userApi.getUserByFilter(query)
+        if(res.st === 1) {
+            dispatch(getUserSuccess(res.data))
+        } else {
+            dispatch(getUserFailed())
+            dispatch(openNotification(
+                { type:"error", message:res.msg, duration:2, open:true }
+            ))
+        }
+    } catch(err) {
         dispatch(getUserFailed())
         dispatch(openNotification(
-            { type:"error", message:res.msg, duration:2, open:true }
+            { type:"error", message:"Something wrong!", duration:2, open:true }
         ))
     }
 }

@@ -6,12 +6,14 @@ import { EditOutlined, UserOutlined } from '@ant-design/icons'
 import { setMenu } from '../../redux/slice/menuSiderSlice'
 import { openNotification } from '../../redux/slice/notificationSlice'
 import authApi from '../../services/AuthApi'
-import { getAccount } from '../../redux/auth/authRequest'
+import { getAccount, logoutUser } from '../../redux/auth/authRequest'
+import { useNavigate } from 'react-router-dom'
 
 const ManageProfile = () => {
 
   const [form] = Form.useForm()
   const dispatch = useDispatch()
+  const navigate = useNavigate()
 
   const user = useSelector(state => state.auth.login.value)
 
@@ -23,24 +25,44 @@ const ManageProfile = () => {
   };
 
   const handlePostData = async (values) => {
-    if (values.newPassword !== values.confirmPassword) {
-      dispatch(openNotification(
-        { type: "error", message: "Nhập lại mật khẩu mới!", duration: 2, open: true }
-      ))
-      return
+    if(values.oldPassword && values.newPassword && values.confirmPassword) {
+      if (values.newPassword === values.oldPassword) {
+        dispatch(openNotification(
+          { type: "error", message: "New password and old password must different!", duration: 3, open: true }
+        ))
+        return
+      }
+      if (values.newPassword !== values.confirmPassword) {
+        dispatch(openNotification(
+          { type: "error", message: "New password and confirm password is not same!", duration: 3, open: true }
+        ))
+        return
+      }
     }
-    setIsFetching(true);
-    const res = await authApi.updateUser(user.id, values)
-    if (res.st === 1) {
+    try {
+      setIsFetching(true);
+      const res = await authApi.updateUser(user.id, values)
+      if (res.st === 1) {
+        dispatch(openNotification(
+          { type: "success", message: res.msg, duration: 3, open: true }
+        ))
+        setIsFetching(false)
+        setIsModalOpen(false)
+        if(values.oldPassword) {
+          await logoutUser(navigate)
+        } else {
+          await getAccount(dispatch, user.id)
+        }
+      } else {
+        dispatch(openNotification(
+          { type: "error", message: res.msg, duration: 3, open: true }
+        ))
+        setIsFetching(false)
+        setIsModalOpen(false)
+      }
+    } catch(err) {
       dispatch(openNotification(
-        { type: "success", message: res.msg, duration: 2, open: true }
-      ))
-      setIsFetching(false)
-      setIsModalOpen(false)
-      await getAccount(dispatch, user.id)
-    } else {
-      dispatch(openNotification(
-        { type: "error", message: res.msg, duration: 2, open: true }
+        { type: "error", message: "Something wrong!", duration: 3, open: true }
       ))
       setIsFetching(false)
       setIsModalOpen(false)
@@ -48,13 +70,18 @@ const ManageProfile = () => {
   };
 
   useEffect(() => {
-    form.setFieldsValue({
-      username: user.username,
-      email: user.email,
-      phone: user.phone,
-      address: user.address,
-    })
-  }, [user])
+    if(isModalOpen) {
+      form.resetFields()
+    }
+    if(user) {
+      form.setFieldsValue({
+        username: user.username,
+        email: user.email,
+        phone: user.phone,
+        address: user.address,
+      })
+    }
+  }, [isModalOpen])
 
   useEffect(() => {
     dispatch(setMenu(["14"]))
@@ -86,10 +113,6 @@ const ManageProfile = () => {
         <Space>
           <Typography.Text strong>Phone:</Typography.Text>
           <Typography.Text>{user.phone}</Typography.Text>
-        </Space>
-        <Space>
-          <Typography.Text strong>Username:</Typography.Text>
-          <Typography.Text>{user.username}</Typography.Text>
         </Space>
       </Space>
 

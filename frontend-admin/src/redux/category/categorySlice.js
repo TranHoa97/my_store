@@ -16,6 +16,7 @@ export const categorySlice = createSlice({
         getCategorySuccess: (state, action) => {
             state.isFetching = false
             state.value = action.payload
+            state.error = false
         },
         getCategoryFailed: (state) => {
             state.isFetching = false

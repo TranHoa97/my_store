@@ -1,66 +1,83 @@
 import React, { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
+import { useLocation, useSearchParams } from 'react-router-dom'
 import { Space, Button, Form, Input, Drawer, Checkbox, Row, Col, Spin } from 'antd'
 import { openNotification } from '../../redux/slice/notificationSlice'
 
 import groupApi from '../../services/GroupApi'
-import { getAllGroups } from '../../redux/group/groupRequest'
+import { getGroupByFilter } from '../../redux/group/groupRequest'
 
 const GroupDrawer = (props) => {
 
     const [form] = Form.useForm()
     const dispatch = useDispatch()
+    const location = useLocation()
+    const [searchParams, setSearchParams] = useSearchParams()
+    const page = searchParams.get("page")
+
+    const roles = useSelector(state => state.roles.value?.data)
+    const action = useSelector(state => state.roles.value?.action)
 
     const [isFetching, setIsFetching] = useState(false)
 
     const handlePostData = async (values) => {
         // console.log(values);
-        setIsFetching(true)
-        if (props.action === "create") {
-            const res = await groupApi.createGroup(values)
-            if (res.st === 1) {
-                dispatch(openNotification(
-                    { type: "success", message: res.msg, duration: 2, open: true }
-                ))
-                setIsFetching(false)
-                props.onClose()
-                await getAllGroups(dispatch)
+        try {
+            setIsFetching(true)
+            if (props.action === "create") {
+                const res = await groupApi.createGroup(values)
+                if (res.st === 1) {
+                    dispatch(openNotification(
+                        { type: "success", message: res.msg, duration: 2, open: true }
+                    ))
+                    setIsFetching(false)
+                    props.onClose()
+                    if(+page === 1) {
+                        await getGroupByFilter(dispatch, `?page=1&limit=${props.limit}`)
+                    } else {
+                        setSearchParams({ page: 1, limit: props.limit })
+                    }
+                } else {
+                    dispatch(openNotification(
+                        { type: "error", message: res.msg, duration: 2, open: true }
+                    ))
+                    setIsFetching(false)
+                }
             } else {
-                dispatch(openNotification(
-                    { type: "error", message: res.msg, duration: 2, open: true }
-                ))
-                setIsFetching(false)
+                const res = await groupApi.updateGroup(props.data.id, values)
+                if (res.st === 1) {
+                    dispatch(openNotification(
+                        { type: "success", message: res.msg, duration: 2, open: true }
+                    ))
+                    setIsFetching(false)
+                    props.onClose()
+                    await getGroupByFilter(dispatch, location.search ? location.search : `?page=1&limit=${props.limit}`)
+                } else {
+                    dispatch(openNotification(
+                        { type: "error", message: res.msg, duration: 2, open: true }
+                    ))
+                    setIsFetching(false)
+                }
             }
-        } else {
-            const res = await groupApi.updateGroup(props.data.id, values)
-            if (res.st === 1) {
-                dispatch(openNotification(
-                    { type: "success", message: res.msg, duration: 2, open: true }
-                ))
-                setIsFetching(false)
-                props.onClose()
-                await getAllGroups(dispatch)
-            } else {
-                dispatch(openNotification(
-                    { type: "error", message: res.msg, duration: 2, open: true }
-                ))
-                setIsFetching(false)
-            }
+        } catch (err) {
+            dispatch(openNotification(
+                { type: "error", message: "Something wrong!", duration: 3, open: true }
+            ))
+            setIsFetching(false)
         }
     }
 
     useEffect(() => {
-        if (props.action === "create") {
+        if (props.action === "update" && props.data && props.open) {
+            const { label, description, roles } = props.data
+            form.setFieldsValue({
+                title: label,
+                description: description,
+                roles: roles?.map(item => item.id ? item.id : "")
+            })
+        }
+        if (props.open === false) {
             form.resetFields()
-        } else {
-            if(props.data) {
-                const { label, description, roles } = props.data
-                form.setFieldsValue({
-                    title: label,
-                    description: description,
-                    roles: roles?.map(item => item.id ? item.id : "")
-                })
-            }
         }
     }, [props.open])
 
@@ -68,7 +85,7 @@ const GroupDrawer = (props) => {
         <>
             <Drawer
                 title={props.action === "create" ? "Create" : "Update"}
-                width={850}
+                width={720}
                 onClose={props.onClose}
                 open={props.open}
                 forceRender
@@ -107,30 +124,41 @@ const GroupDrawer = (props) => {
 
                     {/* PERMISSION */}
                     <Form.Item label="Permission:" name="roles">
-                        <Checkbox.Group>
+                        <Checkbox.Group style={{ display: "flex" }}>
                             <Row>
-                                <Col span={4}>
-                                    <Row gutter={[0, 20]} style={{ fontWeight: "bold" }}>
-                                        <Col span={24}>Groups</Col>
-                                        <Col span={24}>Users</Col>
-                                        <Col span={24}>Categories</Col>
-                                        <Col span={24}>Brands</Col>
-                                        <Col span={24}>Attributes</Col>
-                                        <Col span={24}>Attributes Values</Col>
-                                        <Col span={24}>Products</Col>
-                                        <Col span={24}>Variants</Col>
-                                        <Col span={24}>Images</Col>
-                                        <Col span={24}>Orders</Col>
+                                <Col span={24}>
+                                    <Row style={{ marginBottom: "20px", textTransform: "capitalize", fontWeight: "bold" }}>
+                                        <Col span={4}></Col>
+                                        {
+                                            action && action.map((item, index) => (
+                                                <Col span={5} key={index}>{item}</Col>
+                                            ))
+                                        }
                                     </Row>
-                                </Col>
-                                <Col span={20}>
-                                    <Row gutter={[0, 20]} style={{ textTransform: "capitalize" }}>
-                                        {props.roles?.map((item, index) => (
-                                            <Col span={6} key={index}>
-                                                <Checkbox value={item.id}>{item.description}</Checkbox>
-                                            </Col>
-                                        ))}
-                                    </Row>
+                                    {
+                                        roles && roles.map((item, index) => (
+                                            <Row
+                                                key={index}
+                                                justify={"space-between"}
+                                                align={"middle"}
+                                                style={{ marginBottom: "20px" }}
+                                            >
+                                                <Col
+                                                    span={4}
+                                                    style={{ textTransform: "capitalize", fontWeight: "bold" }}
+                                                >
+                                                    {item.manage}
+                                                </Col>
+                                                {
+                                                    item.roles.map(e => (
+                                                        <Col span={5} key={e.id}>
+                                                            <Checkbox value={e.id}></Checkbox>
+                                                        </Col>
+                                                    ))
+                                                }
+                                            </Row>
+                                        ))
+                                    }
                                 </Col>
                             </Row>
                         </Checkbox.Group>

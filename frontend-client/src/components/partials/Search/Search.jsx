@@ -1,7 +1,8 @@
-import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useEffect, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Link } from 'react-router-dom'
 import { debounce } from 'lodash'
+import _ from 'lodash'
 
 import productApi from '../../../services/productApi'
 import numberWithCommas from '../../../utils/numberWithCommas'
@@ -9,6 +10,8 @@ import numberWithCommas from '../../../utils/numberWithCommas'
 const Search = (props) => {
 
     const navigate = useNavigate()
+    const [searchParams] = useSearchParams()
+    const search = searchParams.get("search")
 
     const [products, setProducts] = useState(null)
 
@@ -31,18 +34,22 @@ const Search = (props) => {
     }, 500)
 
     const fetchSuggest = async (value) => {
-        const res = await productApi.getProductSearch(value)
-        if (res.st === 1) {
-            setProducts(res.data)
-        } else {
-            setProducts([])
+        try {
+            const res = await productApi.getProductSearch(value)
+            if (res.st === 1) {
+                setProducts(res.data)
+            } else {
+                setProducts([])
+            }
+        } catch(err) {
+            alert("Something wrong!")
         }
     }
 
     return (
         <div className='search'>
             <form onSubmit={handleSubmit} onChange={handleChange}>
-                <input type="text" name='search' placeholder='Nhập tên sản phẩm muốn tìm...' />
+                <input type="text" name='search' placeholder='Nhập tên sản phẩm muốn tìm...' defaultValue={search ? search : ""} />
                 <button type='submit'>
                     <i className="fa-solid fa-magnifying-glass"></i>
                 </button>

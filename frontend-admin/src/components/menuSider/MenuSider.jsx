@@ -15,9 +15,8 @@ import {
 } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
 
-import authApi from '../../services/AuthApi';
-import { useDispatch, useSelector } from 'react-redux';
-import { setMenu } from '../../redux/slice/menuSiderSlice';
+import { useSelector } from 'react-redux';
+import { logoutUser } from '../../redux/auth/authRequest';
 
 function getItem(label, key, icon, children) {
     return {
@@ -35,14 +34,6 @@ const MenuSider = (props) => {
     const user = useSelector(state => state.auth.login.value)
 
     const [currentMenu, setCurrentMenu] = useState(null)
-
-    const handleLogout = async () => {
-        const res = await authApi.logoutUser()
-        if (res.st === 1) {
-            localStorage.clear()
-            navigate("/login")
-        }
-    }
 
     useEffect(() => {
         if (user) {
@@ -98,7 +89,7 @@ const MenuSider = (props) => {
                     ...results,
                     getItem(<Link to={"/profile"}>Profile</Link>, '14', <ProfileOutlined />),
                     getItem(<Link to={"/settings"}>Settings</Link>, '16', <SettingOutlined />),
-                    getItem(<p onClick={() => handleLogout()}>Log out</p>, '15', <LogoutOutlined />),
+                    getItem(<p onClick={() => logoutUser(navigate)}>Log out</p>, '15', <LogoutOutlined />),
                 ]
             )
         }

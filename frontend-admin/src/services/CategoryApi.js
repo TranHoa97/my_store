@@ -1,8 +1,11 @@
 import axiosClient from "./AxiosClient"
 
 const categoryApi = {
-    getAllCategories() {
-        const url = '/category/read'
+    getCategoryByFilter(query) {
+        let url = `/category/read`
+        if(query) {
+            url += `${query}`
+        }
         return axiosClient.get(url)
     },
     createCateogry(data) {

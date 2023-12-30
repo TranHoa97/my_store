@@ -5,33 +5,64 @@ require("dotenv").config()
 const imageController = {
     getImages: async (req, res) => {
         try {
-            const { search } = req.query
+            const { search, limit, page } = req.query
 
             let sql = `select 
             image.*, 
             product.title as product_name 
             from image
             left join product on image.product_id = product.id
-            where image.product_id is not null`
+            where image.id is not null
+            `
+
+            let sqlTotal = `select 
+            count(*) as count 
+            from image 
+            left join product on image.product_id = product.id
+            where image.id is not null
+            `
 
             if (search) {
-                const newSearch = search.toLowerCase().replaceAll("-", " ")
-                sql += ` and (product.title like "%${newSearch}%" 
-                or product.id like "%${newSearch}%")`
+                sql += ` and (product.title like "%${search}%" 
+                or product.id like "%${search}%"
+                or product.slug like "%${search}%")`
+
+                sqlTotal += ` and (product.title like "%${search}%" 
+                or product.id like "%${search}%"
+                or product.slug like "%${search}%")`
             }
 
             sql += ` order by image.product_id asc`
 
+            if(limit) {
+                sql += ` limit ${limit}`
+            }
+
+            if(page) {
+                const offset = (page - 1) * limit
+                sql += ` offset ${offset}`
+            }
+
             // Get data
-            const [results] = await db.execute(sql)
+            const [images] = await db.execute(sql)
+
+            const [totalImage] = await db.execute(sqlTotal)
 
             return res.status(200).json({
                 st: 1,
                 msg: "Get images successfully!",
-                data: results
+                data: {
+                    data: images.length > 0 ? images : [],
+                    pagination: {
+                        page: +(page),
+                        limit: +(limit),
+                        total: +(totalImage[0]?.count)
+                    }
+                }
             })
 
         } catch (err) {
+            console.log(err);
             return res.status(500).json({
                 st: 0,
                 msg: err.message

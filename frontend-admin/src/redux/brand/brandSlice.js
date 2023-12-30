@@ -16,6 +16,7 @@ export const brandSlice = createSlice({
         getBrandSuccess: (state, action) => {
             state.isFetching = false
             state.value = action.payload
+            state.error = false
         },
         getBrandFailed: (state) => {
             state.isFetching = false

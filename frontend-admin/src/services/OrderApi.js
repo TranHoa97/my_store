@@ -2,7 +2,10 @@ import axiosClient from "./AxiosClient"
 
 const orderApi = {
     getOrdersByFilter(query) {
-        const url = `/orders/read${query}`
+        let url = `/orders/read`
+        if(query) {
+            url += `${query}`
+        }
         return axiosClient.get(url)
     },
     createOrder(data) {

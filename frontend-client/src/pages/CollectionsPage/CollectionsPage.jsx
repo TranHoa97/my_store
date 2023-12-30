@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react'
 import BreadCrumb from '../../components/partials/BreadCrumb/BreadCrumb'
 import { useSelector } from 'react-redux'
 import { useLocation, useParams, useSearchParams } from 'react-router-dom'
+import ReactPaginate from 'react-paginate';
+
 import CheckBox from '../../components/partials/CheckBox/CheckBox'
 import productApi from '../../services/productApi'
 import ProductCard from '../../components/partials/ProductCard/ProductCard'
@@ -9,7 +11,7 @@ import ProductCard from '../../components/partials/ProductCard/ProductCard'
 import noresult from '../../assets/no-result/no-result.png'
 import logoBrand from '../../assets/logo-brand/logo_digital_3_250x.png'
 
-const sort = [
+const sorts = [
     {
         id: 1,
         label: "Bán chạy nhất",
@@ -30,27 +32,29 @@ const sort = [
 const CollectionsPage = () => {
 
     const params = useParams()
-    const [searchParams, setSearchParams] = useSearchParams()
     const location = useLocation()
-    const sortUrl = searchParams.get("sort")
+    const [searchParams, setSearchParams] = useSearchParams()
 
     const categories = useSelector(state => state.category.value)
 
-    const [filter, setFilter] = useState({
-        sort: "ban-chay-nhat"
-    })
-    const [active, setActive] = useState(false)
-    const [sortCurrent, setSortCurrnent] = useState(null)
+    const [activeSort, setActiveSort] = useState(false)
     const [mobileSidebar, setMobileSidebar] = useState(false)
     const [attributes, setAttributes] = useState(null)
     const [brands, setBrands] = useState(null)
     const [products, setProducts] = useState(null)
+    const [totalPage, setTotalPage] = useState(null)
+    const [filter, setFilter] = useState({
+        brand: [],
+        sort: "ban-chay-nhat",
+        page: 1,
+        limit: 6
+    })
 
     const handleChange = (type, checked, value) => {
         let newFilter = filter
         if (checked) {
-            if(type) {
-                if(newFilter[type]) {
+            if (type) {
+                if (newFilter[type]) {
                     newFilter[type] = [...newFilter[type], value]
                 } else {
                     newFilter[type] = [value]
@@ -58,35 +62,33 @@ const CollectionsPage = () => {
                 setFilter(newFilter)
             }
         } else {
-            if(type) {
+            if (type) {
                 newFilter[type] = newFilter[type]?.filter(item => item !== value)
                 setFilter(newFilter)
             }
         }
-        setSearchParams(newFilter)
+        setSearchParams({...newFilter, page: 1})
     }
 
-    const openSort = () => {
-        if (active === false) {
-            setActive(true)
-        } else {
-            setActive(false)
-        }
-    }
-
-    const handleActive = (label, slug) => {
-        setSortCurrnent(label)
-        setActive(false)
-        setFilter({ ...filter, sort: slug})
-        setSearchParams({ ...filter, sort: slug })
+    const handleActiveSort = (value) => {
+        setActiveSort(false)
+        setFilter({ ...filter, sort: value.slug, page: 1 })
+        setSearchParams({ ...filter, sort: value.slug, page: 1 })
     }
 
     const clearFilter = () => {
-        setSortCurrnent("Bán chạy nhất")
         setFilter({
-            sort: "ban-chay-nhat",
+            brand: [],
+            sort: sorts[0],
+            page: 1,
+            limit: 6
         })
         setSearchParams({})
+    }
+
+    const handlePageClick = (event) => {
+        setFilter({...filter, page: event.selected + 1})
+        setSearchParams({...filter, page: event.selected + 1}) 
     }
 
     const fetchAttributes = async () => {
@@ -107,34 +109,34 @@ const CollectionsPage = () => {
         }
     }
 
-    const fetchProducts = async (category, limit, query) => {
-        const res = await productApi.getCollections(category, limit, query)
+    const fetchProducts = async (category, query) => {
+        const res = await productApi.getCollections(category, query)
         if (res.st === 1) {
             setProducts(res.data)
-            setFilter(res.filter)
+            setTotalPage(res.filter.total_page)
+            let {total_page, ...others} = res.filter
+            setFilter(others)
         } else {
             setProducts([])
         }
     }
 
     useEffect(() => {
-        const sortUrl = searchParams.get("sort")
-        if (!sortUrl) {
-            fetchProducts(params.category, 9, `?sort=ban-chay-nhat`)
-            setSortCurrnent("Bán chạy nhất")
+        if(location.search) {
+            fetchProducts(params.category, location.search)
         } else {
-            fetchProducts(params.category, 9, location.search)
-            setSortCurrnent(() => {
-                const currentSort = sort.find(item => item.slug === sortUrl)
-                return currentSort.label
-            })
+            fetchProducts(params.category, `?sort=${filter.sort}&page=1&limit=${filter.limit}`)
         }
-    }, [searchParams])
+    }, [location])
 
     useEffect(() => {
         fetchAttributes()
         fetchBrands()
     }, [params.category])
+
+    useEffect(() => {
+        window.scrollTo(0, 0)
+    }, [])
 
     return (
         <>
@@ -157,7 +159,7 @@ const CollectionsPage = () => {
                                     <div className="collections__mobile-sidebar__top__brand">
                                         <img src={logoBrand} alt="" />
                                     </div>
-                                    <div 
+                                    <div
                                         className="collections__mobile-sidebar__top__close"
                                         onClick={() => setMobileSidebar(false)}
                                     >
@@ -172,10 +174,10 @@ const CollectionsPage = () => {
                                     </div>
                                     <div className="collections__sidebar__filter__select">
                                         {brands && brands.map((item, index) => (
-                                            <div className="collections__sidebar__filter__select__item" key={index}>
+                                            <div className="collections__sidebar__filter__select__item brand" key={index}>
                                                 <CheckBox
                                                     label={item.label}
-                                                    checked={filter.brand?.includes(item.slug)}
+                                                    checked={filter.brand?.includes(item.slug) || false}
                                                     onChange={(input) => handleChange("brand", input.checked, item.slug)}
                                                 />
                                             </div>
@@ -194,7 +196,7 @@ const CollectionsPage = () => {
                                                     <div className="collections__sidebar__filter__select__item" key={i}>
                                                         <CheckBox
                                                             label={e.label}
-                                                            checked={filter[item.label]?.includes(e.slug)}
+                                                            checked={filter[item?.label]?.includes(e.slug) || false}
                                                             onChange={(input) => handleChange(item.label, input.checked, e.slug)}
                                                         />
                                                     </div>
@@ -214,8 +216,8 @@ const CollectionsPage = () => {
                                     </div>
                                 </div>
                             </div>
-                            
-                            <div 
+
+                            <div
                                 className='collections__mobile-sidebar__over'
                                 onClick={() => setMobileSidebar(false)}
                             ></div>
@@ -228,19 +230,19 @@ const CollectionsPage = () => {
                                 <div className="collections__content__sort__dropdown">
                                     <div
                                         className="collections__content__sort__dropdown__button"
-                                        onClick={openSort}
+                                        onClick={() => activeSort ? setActiveSort(false) : setActiveSort(true)}
                                     >
-                                        {sortCurrent}
+                                        {sorts.find(item => item.slug === filter.sort)?.label}
                                         <i className="fa-solid fa-caret-down"></i>
                                     </div>
                                     <div className="collections__content__sort__dropdown__menu">
-                                        <ul className={active ? "active" : ""}>
+                                        <ul className={activeSort ? "active" : ""}>
                                             {
-                                                sort.map((item, index) => (
+                                                sorts.map((item, index) => (
                                                     <li
-                                                        className={sortCurrent === item.label ? "active" : ""}
                                                         key={index}
-                                                        onClick={() => handleActive(item.label, item.slug)}
+                                                        className={filter.sort === item.slug ? "active" : ""}
+                                                        onClick={() => handleActiveSort(item)}
                                                     >
                                                         {item.label}
                                                     </li>
@@ -249,7 +251,7 @@ const CollectionsPage = () => {
                                         </ul>
                                     </div>
                                 </div>
-                                <div 
+                                <div
                                     className="collections__content__sort__filter"
                                     onClick={() => setMobileSidebar(true)}
                                 >
@@ -260,7 +262,7 @@ const CollectionsPage = () => {
                             <div className="collections__content__box">
                                 {
                                     products && products.map((item, index) => (
-                                        <div className="collections__content__item" key={index}>
+                                        <div className="collections__content__box__item" key={index}>
                                             <ProductCard data={item} variants={true} />
                                         </div>
                                     ))
@@ -278,6 +280,34 @@ const CollectionsPage = () => {
                                     <></>
                                 )
                             }
+
+                            {
+                                products && products.length > 0 ? (
+                                    <div className='collections__content__paginate'>
+                                        <ReactPaginate
+                                            breakLabel="..."
+                                            nextLabel="next >"
+                                            onPageChange={handlePageClick}
+                                            pageRangeDisplayed={3}
+                                            pageCount={totalPage}
+                                            forcePage={(parseInt(searchParams.get("page")) || 1) - 1}
+                                            previousLabel="< previous"
+                                            renderOnZeroPageCount={null}
+                                            containerClassName='collections__content__paginate__pagination'
+                                            pageClassName="collections__content__paginate__page-item"
+                                            pageLinkClassName="collections__content__paginate__page-link"
+                                            breakClassName="collections__content__paginate__page-item"
+                                            breakLinkClassName="collections__content__paginate__page-link"
+                                            previousClassName="collections__content__paginate__page-item"
+                                            previousLinkClassName="collections__content__paginate__page-link"
+                                            nextClassName="collections__content__paginate__page-item"
+                                            nextLinkClassName="collections__content__paginate__page-link"
+                                            activeClassName='collections__content__paginate__active'
+                                        />
+                                    </div>
+                                ) : (<></>)
+                            }
+
                         </div>
                     </div>
                 </div>

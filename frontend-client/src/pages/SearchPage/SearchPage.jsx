@@ -13,9 +13,15 @@ const SearchPage = () => {
     const [products, setProducts] = useState(null)
 
     const fetchProducts = async () => {
-        const res = await productApi.getProductSearch(location.search)
-        if (res.st === 1) {
-            setProducts(res.data)
+        try {
+            const res = await productApi.getProductSearch(location.search)
+            if (res.st === 1) {
+                setProducts(res.data)
+            } else {
+                setProducts([])
+            }
+        } catch(err) {
+            alert("Something wrong!")
         }
     }
 

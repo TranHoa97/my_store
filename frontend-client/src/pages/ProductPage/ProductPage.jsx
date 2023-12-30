@@ -6,48 +6,60 @@ import productApi from '../../services/productApi'
 import BreadCrumb from '../../components/partials/BreadCrumb/BreadCrumb'
 import ProductView from '../../components/partials/ProductView/ProductView'
 import SlickCarousel from '../../components/partials/SlickCarousel/SlickCarousel'
+import ProductCard from '../../components/partials/ProductCard/ProductCard'
 
 const ProductPage = () => {
   const params = useParams()
-  const [product, setProduct] = useState(null)
-  const [products, setProducts] = useState(null)
+  const [singleProduct, setSingleProduct] = useState(null)
+  const [multiProducts, setMultiProducts] = useState(null)
 
   const categories = useSelector(state => state.category.value)
 
-  const fetchData = async (category, limit) => {
-    const res = await productApi.getProductsHome(category, limit)
-    if(res.st === 1) {
-      setProducts(res.data)
+  const fetchMultiProducts = async (category, limit) => {
+    try {
+      const res = await productApi.getProductsHome(category, limit)
+      if (res.st === 1) {
+        setMultiProducts(res.data)
+      } else {
+        setMultiProducts([])
+      }
+    } catch (err) {
+      alert("Something wrong!")
     }
   }
 
-  const fetchProduct = async () => {
-    const res = await productApi.getProduct(params.slug)
-    if (res.st === 1) {
-      setProduct(res.data)
-    } else {
-      console.log(res.msg);
+  const fetchSingleProduct = async () => {
+    try {
+      const res = await productApi.getProduct(params.slug)
+      if (res.st === 1) {
+        setSingleProduct(res.data)
+      } else {
+        setSingleProduct([])
+      }
+    } catch (err) {
+      alert("Something wrong!")
     }
   }
 
   useEffect(() => {
-    fetchProduct()
-    fetchData(params.category, 5)
+    fetchSingleProduct()
+    fetchMultiProducts(params.category, 5)
   }, [params])
+
   return (
     <>
       {/* Breadcrumb */}
       <div className="wrapper">
         <BreadCrumb
           collections={categories?.find(item => item.slug === params.category)}
-          title={product?.title}
+          title={singleProduct?.brand_label}
         />
       </div>
 
       {/* Product View */}
       <div className="wrapper">
-        {product ? (
-          <ProductView data={product} />
+        {singleProduct ? (
+          <ProductView data={singleProduct} />
         ) : (<></>)}
       </div>
 
@@ -56,17 +68,14 @@ const ProductPage = () => {
         <div className="other-products">
           <div className="other-products__title">Các sản phẩm khác</div>
           <div className="other-products__content">
-            {products ? (
-              <SlickCarousel
-                product={products}
-                dots={false}
-                mainSlideArrow={true}
-                subSlideArrow={false}
-                asNavFor={false}
-                mainShow={4}
-                responsive={2}
-              />
-            ) : (<></>)}
+            <SlickCarousel
+              data={multiProducts}
+              dots={false}
+              asNavFor={false}
+              show={4}
+              responsive={2}
+              product={true}
+            />
           </div>
         </div>
       </div>

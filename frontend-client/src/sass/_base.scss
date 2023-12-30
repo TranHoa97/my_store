@@ -70,8 +70,11 @@ textarea:focus-visible {
 }
 
 .container {
-    // min-height: 100vh;
     padding: 20px 0;
+    @include tablet {
+        background-color: $-bg-color;
+        margin: 0 5px;
+    }
     @include mobile {
         background-color: $-bg-color;
         margin: 0 5px;

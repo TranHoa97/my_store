@@ -94,12 +94,11 @@ const authController = {
         try {
             // Validate req body
             const username = req.body.username ? req.body.username : ""
-            const email = req.body.email ? req.body.email : ""
 
             // Get User
             const [results] = await db.execute(
-                `select * from user where username = ? OR email = ?`, 
-                [username, email]
+                `select * from user where username = ? or email = ?`, 
+                [username, username]
             )
 
             const user = results[0]
@@ -152,11 +151,18 @@ const authController = {
     },
 
     handleLogout: async(req,res) => {
-        res.clearCookie("jwt")
-        return res.status(200).json({
-            st: 1,
-            msg: "Logged out!"
-        })
+        try {
+            res.clearCookie("jwt")
+            return res.status(200).json({
+                st: 1,
+                msg: "Logged out!"
+            })
+        } catch(err) {
+            return res.status(500).json({
+                st: 0,
+                msg: err.message
+            })
+        }
     },
 
     updateAccount: async (req, res) => {
@@ -231,24 +237,24 @@ const authController = {
                 if (results) {
                     return res.status(200).json({
                         st: 1,
-                        msg: "Update user successfully!"
+                        msg: "Update account successfully!"
                     })
                 } else {
                     return res.status(200).json({
                         st: 0,
-                        msg: "Update user failed!"
+                        msg: "Update account failed!"
                     })
                 }
             } else {
                 const [results] = await db.execute(
-                    `update users set username = ?, email = ?, phone = ?, address = ? 
+                    `update user set username = ?, email = ?, phone = ?, address = ? 
                     where id = ?`, 
                     [username, email, phone, address, id]
                 )
                 if (results) {
                     return res.status(200).json({
                         st: 1,
-                        msg: "Update user successfully!"
+                        msg: "Update account successfully!"
                     })
                 }
             }
@@ -289,7 +295,7 @@ const authController = {
             const { password, group_id, ...others } = user
             return res.status(200).json({
                 st: 1, 
-                msg:"Login Successfully",
+                msg:"Get account successfully",
                 data: {...others, groupWithRoles: groupWithRoles}
             })
         } catch(err) {

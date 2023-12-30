@@ -20,7 +20,6 @@ export const imageSlice = createSlice({
         },
         getImageFailed: (state) => {
             state.isFetching = false
-            state.value = null
             state.error = true
         },
     },

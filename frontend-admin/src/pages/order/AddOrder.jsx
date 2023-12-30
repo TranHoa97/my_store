@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { Spin, Row, Col, Button, Form, Input, Select, Card, InputNumber, Typography, Space } from 'antd'
 import { CloseOutlined } from '@ant-design/icons'
 
-import { getAllVariants } from '../../redux/variants/variantsRequest'
+import { getVariantByFilter } from '../../redux/variants/variantsRequest'
 import { setMenu } from '../../redux/slice/menuSiderSlice'
 import orderApi from '../../services/OrderApi'
 import { openNotification } from '../../redux/slice/notificationSlice'
+import numberWithCommas from '../../ultis/numberWithCommas'
 
 const AddOrder = () => {
 
@@ -15,33 +16,41 @@ const AddOrder = () => {
     const navigate = useNavigate()
     const dispatch = useDispatch()
 
-    const data = useSelector(state => state.variants)
-    const variants = data.value ? data.value.map((item, index) => {
+    const loading = useSelector(state => state.variants.isFetching)
+    const variants = useSelector(state => state.variants.value)?.map((item, index) => {
         return {
             value: index,
-            label: `${item.title} - ${item.price}VND - ${item.color}`,
+            label: `${item.title} - ${numberWithCommas(+item.price)} VND - ${item.color}`,
             price: item.price,
             variants_id: item.id,
             color: item.color
         }
-    }) : []
+    })
+    const pagination = useSelector(state => state.order.value?.pagination)
 
     const [amount, setAmount] = useState(0)
     const [isFetching, setIsFetching] = useState(false)
 
     const handlePostData = async (values) => {
         // console.log(values);
-        setIsFetching(true)
-        const res = await orderApi.createOrder(values)
-        if (res.st === 1) {
+        try {
+            setIsFetching(true)
+            const res = await orderApi.createOrder(values)
+            if (res.st === 1) {
+                dispatch(openNotification(
+                    { type: "success", message: res.msg, duration: 2, open: true }
+                ))
+                setIsFetching(false)
+                navigate(`/orders?page=1&limit=${pagination.limit}&status=${values.status.replaceAll(" ", "+")}`)
+            } else {
+                dispatch(openNotification(
+                    { type: "error", message: res.msg, duration: 2, open: true }
+                ))
+                setIsFetching(false)
+            }
+        } catch(err) {
             dispatch(openNotification(
-                { type: "success", message: res.msg, duration: 2, open: true }
-            ))
-            navigate(`/orders`)
-            setIsFetching(false)
-        } else {
-            dispatch(openNotification(
-                { type: "error", message: res.msg, duration: 2, open: true }
+                { type: "error", message: "Something wrong!", duration: 2, open: true }
             ))
             setIsFetching(false)
         }
@@ -79,7 +88,7 @@ const AddOrder = () => {
 
     useEffect(() => {
         dispatch(setMenu(["11", "sub4"]))
-        getAllVariants(dispatch)
+        getVariantByFilter(dispatch)
     }, [])
 
     return (
@@ -92,7 +101,7 @@ const AddOrder = () => {
             </Row>
 
             {
-                data.isFetching ? (
+                loading ? (
                     <Row justify={"center"} align={"middle"} style={{ height: "100%" }}>
                         <Spin size='large' />
                     </Row>
@@ -163,14 +172,18 @@ const AddOrder = () => {
                                                     onClick={() => {
                                                         remove(field.name);
                                                         const data = form.getFieldValue('products');
-                                                        setAmount(data.reduce((total, item) => total + Number(item.amount), 0))
+                                                        setAmount(data.reduce((total, item) => total + Number(item ? item.amount : 0), 0))
                                                     }}
                                                 />
                                             }
                                         >
                                             <Row gutter={[15, 0]} justify={"end"}>
                                                 <Col span={18}>
-                                                    <Form.Item label="Products" name={[field.name, 'index']}>
+                                                    <Form.Item label="Products" name={[field.name, 'index']}
+                                                        rules={[
+                                                            { required: true, message: "Please input your value!" }
+                                                        ]}
+                                                    >
                                                         <Select
                                                             placeholder="Please Select..."
                                                             options={variants}
@@ -182,8 +195,8 @@ const AddOrder = () => {
                                                 <Col span={6}>
                                                     <Form.Item label="Qty" name={[field.name, 'quantity']}
                                                         rules={[
-                                                            { required: true, message: "Please input your number!" },
-                                                            { type: 'number', message: "Please input your number!" }
+                                                            { required: true, message: "Please input your value!" },
+                                                            { type: 'number', message: "Please input your value!" }
                                                         ]}
                                                     >
                                                         <InputNumber
@@ -215,7 +228,7 @@ const AddOrder = () => {
 
                         <Row justify={"end"} style={{ marginTop: "30px", fontWeight: "bold" }} gutter={[5, 0]}>
                             <Col>Net Amount:</Col>
-                            <Col>{amount}</Col>
+                            <Col>{numberWithCommas(+amount)}</Col>
                         </Row>
 
                         <Row justify={"end"} style={{ marginTop: "30px" }}>

@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react'
-import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { Space, Col, Button, Table, Row, Modal, Typography, Input, Select } from 'antd'
 import { PlusOutlined, RedoOutlined } from '@ant-design/icons'
-import _ from "lodash"
 import { debounce } from "lodash";
 
 import { setMenu } from '../../redux/slice/menuSiderSlice'
-import { getAllVariants } from '../../redux/variants/variantsRequest'
+import { getVariantByFilter } from '../../redux/variants/variantsRequest'
 import orderApi from '../../services/OrderApi'
 import { openNotification } from '../../redux/slice/notificationSlice'
 import { formatDate } from '../../ultis/formatDate'
@@ -25,17 +24,23 @@ const ManageOrder = () => {
     let [searchParams, setSearchParams] = useSearchParams();
     const status = searchParams.get("status")
     const search = searchParams.get("search")
+    const page = searchParams.get("page")
 
     const isFetching = useSelector(state => state.order.isFetching)
-    const orders = useSelector(state => state.order.value)?.map((item, index) => {
+    const orders = useSelector(state => state.order.value?.data)?.map((item, index) => {
         return { ...item, key: index + 1 }
     })
+    const pagination = useSelector(state => state.order.value?.pagination)
     const account = useSelector(state => state.auth.login.value).groupWithRoles.roles
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isUpdateOpen, setIsUpdateOpen] = useState(false)
-    const [order, setOrder] = useState(null)
+    const [updateData, setUpdateData] = useState(null)
     const [loading, setLoading] = useState(false)
+    const [filter, setFilter] = useState({
+        page: page ? +page : 1,
+        limit: 6,
+    })
 
     const columns = [
         {
@@ -89,7 +94,7 @@ const ManageOrder = () => {
     ]
 
     const showAdd = () => {
-        const checkPermission = account.find(item => item.url === "/orders/create" || item.url === "/orders/update")
+        const checkPermission = account.find(item => item.url === "/orders/create")
         if (checkPermission) {
             navigate(`/orders/add`)
         } else {
@@ -98,30 +103,72 @@ const ManageOrder = () => {
     }
 
     const showUpdate = (record) => {
-        const checkPermission = account.find(item => item.url === "/orders/create" || item.url === "/orders/update")
+        const checkPermission = account.find(item => item.url === "/orders/update")
         if (checkPermission) {
             setIsUpdateOpen(true);
-            setOrder(record)
+            setUpdateData(record)
         } else {
             navigate(`/error/403`)
         }
     };
 
     const showModal = (record) => {
-        setIsModalOpen(true);
-        setOrder(record)
+        const checkPermission = account.find(item => item.url === "/orders/update")
+        if (checkPermission) {
+            setIsModalOpen(true);
+            setUpdateData(record)
+        } else {
+            navigate(`/error/403`)
+        }
     };
+
+    const handleChange = debounce((type, e) => {
+        // console.log(e);
+        let newFilter = filter
+        switch (type) {
+            case "pagination":
+                setFilter({ ...filter, page: e })
+                newFilter = { ...filter, page: e }
+                break;
+            case "status":
+                if (e === "all") {
+                    let { status, ...others } = filter
+                    setFilter({ ...others, page: 1 })
+                    newFilter = { ...others, page: 1 }
+                } else {
+                    setFilter({ ...filter, page: 1, status: e })
+                    newFilter = { ...filter, page: 1, status: e }
+                }
+                break;
+            case "search":
+                let keyword = e.target.value
+                if (keyword) {
+                    setFilter({ ...filter, page: 1, search: keyword })
+                    newFilter = { ...filter, page: 1, search: keyword }
+                } else {
+                    let { search, ...others } = filter
+                    setFilter({ ...others, page: 1 })
+                    newFilter = { ...others, page: 1 }
+                }
+                break;
+        }
+        setSearchParams(newFilter)
+    }, 500)
 
     const handleDelete = async () => {
         setLoading(true)
-        const res = await orderApi.deleteOrder(order.id)
+        const res = await orderApi.deleteOrder(updateData.id)
         if (res.st === 1) {
             setLoading(false)
             setIsModalOpen(false)
             dispatch(openNotification(
                 { type: "success", message: res.msg, duration: 2, open: true }
             ))
-            refreshData()
+            if (updateData.status === status) {
+                await getOrdersByFilter(dispatch, `?page=1&limit=${filter.limit}&status=${updateData.status}`)
+            } else {
+                setSearchParams({ page: 1, limit: filter.limit, status: updateData.status })
+            }
         } else {
             setLoading(false)
             setIsModalOpen(false)
@@ -131,43 +178,17 @@ const ManageOrder = () => {
         }
     }
 
-    const handleSearch = debounce(async (e) => {
-        let keyword = e.target.value.toLowerCase().replaceAll(" ", "-")
-        if (status) {
-            setSearchParams({ status: status, search: keyword })
-        } else {
-            setSearchParams({ search: keyword })
-        }
-    }, 1000)
-
-    const handleChange = (e) => {
-        let str = e.replaceAll(" ", "-")
-        if (e === "all") {
-            if (search) {
-                setSearchParams({ search: search })
-            } else {
-                setSearchParams({})
-            }
-        } else {
-            if (search) {
-                setSearchParams({ status: str, search: search })
-            } else {
-                setSearchParams({ status: str })
-            }
-        }
-    }
-
-    const refreshData = () => {
-        getOrdersByFilter(dispatch, location.search)
-    }
-
     useEffect(() => {
         dispatch(setMenu(["12", "sub4"]))
-        getAllVariants(dispatch)
+        getVariantByFilter(dispatch)
     }, [])
 
     useEffect(() => {
-        refreshData()
+        if (location.search) {
+            getOrdersByFilter(dispatch, location.search)
+        } else {
+            getOrdersByFilter(dispatch, `?page=1&limit=${filter.limit}`)
+        }
     }, [searchParams])
 
     return (
@@ -175,8 +196,9 @@ const ManageOrder = () => {
             {
                 isUpdateOpen ? (
                     <UpdateOrder
-                        data={order}
+                        data={updateData}
                         onClose={() => setIsUpdateOpen(false)}
+                        limit={filter.limit}
                     />
                 ) : (
                     <Space direction={"vertical"} size={"middle"} style={{ width: "100%" }}>
@@ -185,7 +207,7 @@ const ManageOrder = () => {
                             <Space size={"middle"}>
                                 <Button
                                     icon={<RedoOutlined />}
-                                    onClick={() => refreshData()}
+                                    onClick={() => getOrdersByFilter(dispatch, location.search ? location.search : `?page=1&limit=${filter.limit}`)}
                                 >
                                     Refresh
                                 </Button>
@@ -210,27 +232,32 @@ const ManageOrder = () => {
                                             { value: "Đã xong", label: "Đã xong" },
                                             { value: "all", label: "all" },
                                         ]}
-                                        onChange={handleChange}
-                                        value={status ? status.replaceAll("-", " ") : "all"}
+                                        onChange={(e) => handleChange("status", e)}
+                                        value={status ? status : "all"}
                                         style={{ minWidth: "200px", textTransform: "capitalize" }}
                                     />
                                 </Row>
                             </Col>
-                            <Col span={10}>
+                            <Col span={12}>
                                 <Search
-                                    placeholder="input search customer name..."
-                                    allowClear
-                                    onChange={handleSearch}
-                                    enterButton
+                                    placeholder="input search customer name, phone, address..."
+                                    onChange={(e) => handleChange("search", e)}
                                     defaultValue={search}
+                                    allowClear
+                                    enterButton
                                 />
                             </Col>
                         </Row>
                         <Table
                             columns={columns}
                             dataSource={orders}
-                            pagination={{ pageSize: 6 }}
                             loading={isFetching}
+                            pagination={{
+                                pageSize: filter.limit ? filter.limit : 6,
+                                current: page ? +page : 1,
+                                total: pagination?.total,
+                                onChange: (e) => handleChange("pagination", e)
+                            }}
                         />
                         <Modal
                             title={"Delete Order"}

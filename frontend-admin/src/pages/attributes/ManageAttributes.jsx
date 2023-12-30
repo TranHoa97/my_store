@@ -1,14 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { Link, useSearchParams,useLocation, useNavigate } from 'react-router-dom'
+import { Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom'
 import { Space, Col, Button, Table, Row, Input, Select, Modal, Typography } from 'antd'
 import { PlusOutlined, RedoOutlined } from '@ant-design/icons'
-import _ from "lodash"
 import { debounce } from "lodash";
 
 import AttributesDrawer from '../../components/attributes/AttributesDrawer'
 import { getAttributesByFilter } from '../../redux/attributes/attributesRequest'
-import { getAllCategories } from '../../redux/category/categoryRequest'
+import { getCategoryByFilter } from '../../redux/category/categoryRequest'
 import { openNotification } from '../../redux/slice/notificationSlice'
 import attributesApi from '../../services/AttributesApi'
 import { setMenu } from '../../redux/slice/menuSiderSlice'
@@ -23,27 +22,33 @@ const ManageAttributes = () => {
     let [searchParams, setSearchParams] = useSearchParams();
     const category = searchParams.get("category")
     const search = searchParams.get("search")
+    const page = searchParams.get("page")
 
     const isFetching = useSelector(state => state.attributes.attributes.isFetching)
-    const attributes = useSelector(state => state.attributes.attributes.value)?.map((item, index) => {
+    const attributes = useSelector(state => state.attributes.attributes.value?.data)?.map((item, index) => {
         return { ...item, key: index + 1 }
     })
-    const categories = useSelector(state => state.category.value)?.map(item => {
+    const categories = useSelector(state => state.category.value?.data)?.map(item => {
         return { value: item.id, label: item.label }
     })
+    const pagination = useSelector(state => state.attributes.attributes.value?.pagination)
     const account = useSelector(state => state.auth.login.value).groupWithRoles.roles
 
     const [isDrawerOpen, setIsDrawerOpen] = useState(false)
     const [isModalOpen, setIsModalOpen] = useState(false)
+    const [loading, setLoading] = useState(false)
     const [action, setAction] = useState(null)
     const [updateData, setUpdateData] = useState(null)
-    const [loading, setLoading] = useState(null)
+    const [filter, setFilter] = useState({
+        page: +page || 1,
+        limit: 6
+    })
 
     const columns = [
         {
-            title: 'No',
-            dataIndex: 'key',
-            key: 'key',
+            title: 'AttributeId',
+            dataIndex: 'id',
+            key: 'id',
         },
         {
             title: 'Attributes Name',
@@ -71,8 +76,15 @@ const ManageAttributes = () => {
     ]
 
     const showDrawer = (action, record) => {
-        const checkPermission = account.find(item => item.url === "/attributes/create" || item.url === "/attributes/update")
-        if(checkPermission) {
+        const checkPermissionCreate = account.find(item => item.url === "/attributes/create")
+        const checkPermissionUpdate = account.find(item => item.url === "/attributes/update")
+        if (checkPermissionCreate) {
+            setIsDrawerOpen(true)
+            setAction(action)
+        } else {
+            navigate(`/error/403`)
+        }
+        if (checkPermissionUpdate) {
             setIsDrawerOpen(true)
             setAction(action)
             setUpdateData(record)
@@ -82,65 +94,90 @@ const ManageAttributes = () => {
     }
 
     const showModal = (record) => {
-        setIsModalOpen(true)
-        setUpdateData(record)
+        const checkPermissionDelete = account.find(item => item.url === "/attributes/delete")
+        if (checkPermissionDelete) {
+            setIsModalOpen(true);
+            setUpdateData(record)
+        } else {
+            navigate(`/error/403`)
+        }
     }
+
+    const handleChange = debounce((type, e) => {
+        // console.log(e);
+        let newFilter = filter
+        switch (type) {
+            case "pagination":
+                setFilter({ ...filter, page: e })
+                newFilter = { ...filter, page: e }
+                break;
+            case "category":
+                if (e === "all") {
+                    let { category, ...others } = filter
+                    setFilter({ ...others, page: 1 })
+                    newFilter = { ...others, page: 1 }
+                } else {
+                    setFilter({ ...filter, page: 1, category: e })
+                    newFilter = { ...filter, page: 1, category: e }
+                }
+                break;
+            case "search":
+                let keyword = e.target.value
+                if (keyword) {
+                    setFilter({ ...filter, page: 1, search: keyword })
+                    newFilter = { ...filter, page: 1, search: keyword }
+                } else {
+                    let { search, ...others } = filter
+                    setFilter({ ...others, page: 1 })
+                    newFilter = { ...others, page: 1 }
+                }
+                break;
+        }
+        setSearchParams(newFilter)
+    }, 500)
 
     const handleDelete = async () => {
-        setLoading(true)
-        const res = await attributesApi.deleteAttributes(updateData.id)
-        if (res.st === 1) {
+        try {
+            setLoading(true)
+            const res = await attributesApi.deleteAttributes(updateData.id)
+            if (res.st === 1) {
+                setLoading(false)
+                setIsModalOpen(false)
+                dispatch(openNotification(
+                    { type: "success", message: res.msg, duration: 2, open: true }
+                ))
+                if(updateData.category_id === +category) {
+                    getAttributesByFilter(dispatch, `?page=1&limit=${filter.limit}&category=${updateData.category_id}`)
+                } else {
+                    setSearchParams({ page: 1, limit: filter.limit, category: updateData.category_id })
+                }
+            } else {
+                setLoading(false)
+                setIsModalOpen(false)
+                dispatch(openNotification(
+                    { type: "error", message: res.msg, duration: 2, open: true }
+                ))
+            }
+        } catch (err) {
             setLoading(false)
             setIsModalOpen(false)
             dispatch(openNotification(
-                { type: "success", message: res.msg, duration: 2, open: true }
-            ))
-            refreshData()
-        } else {
-            setLoading(false)
-            setIsModalOpen(false)
-            dispatch(openNotification(
-                { type: "error", message: res.msg, duration: 2, open: true }
+                { type: "error", message: "Something wrong!", duration: 2, open: true }
             ))
         }
-    }
-
-    const handleSearch = debounce(async(e) => {
-        let keyword = e.target.value.toLowerCase().replaceAll(" ", "-")
-        if(category) {
-            setSearchParams({ category: category, search: keyword })
-        } else {
-            setSearchParams({ search: keyword })
-        }
-    }, 1000)
-
-    const handleChange = (e) => {
-        if(e === "all") {
-            if(search) {
-                setSearchParams({ search: search })
-            } else {
-                setSearchParams({})
-            }
-        } else {
-            if(search) {
-                setSearchParams({ category: e, search: search })
-            } else {
-                setSearchParams({ category: e })
-            }
-        }
-    }
-
-    const refreshData = () => {
-        getAttributesByFilter(dispatch, location.search)
     }
 
     useEffect(() => {
         dispatch(setMenu(["8"]))
-        getAllCategories(dispatch)
+        getCategoryByFilter(dispatch)
     }, [])
 
     useEffect(() => {
-        refreshData()
+        if(location.search) {
+            getAttributesByFilter(dispatch, location.search)
+        } else {
+            getAttributesByFilter(dispatch, `?page=1&limit=${filter.limit}`)
+        }
     }, [searchParams])
 
     return (
@@ -150,7 +187,7 @@ const ManageAttributes = () => {
                 <Space size={"middle"}>
                     <Button
                         icon={<RedoOutlined />}
-                        onClick={() => refreshData()}
+                        onClick={() => getAttributesByFilter(dispatch, location.search ? location.search : `?page=1&limit=${filter.limit}`)}
                     >
                         Refresh
                     </Button>
@@ -171,17 +208,18 @@ const ManageAttributes = () => {
                         <Select
                             placeholder={`Please Select...`}
                             options={categories ? [...categories, { value: "all", label: "all" }] : []}
-                            onChange={handleChange}
-                            value={category ? Number(category) : "all"}
+                            value={category ? +category : "all"}
+                            onChange={(e) => handleChange("category", e)}
                             style={{ minWidth: "200px", textTransform: "capitalize" }}
                         />
                     </Row>
                 </Col>
-                <Col span={10}>
+                <Col span={12}>
                     <Search
-                        placeholder="input search attributes name"
+                        placeholder="input search attributes label, slug, id..."
+                        defaultValue={search}
+                        onChange={(e) => handleChange("search", e)}
                         allowClear
-                        onChange={handleSearch}
                         enterButton
                     />
                 </Col>
@@ -190,8 +228,13 @@ const ManageAttributes = () => {
             <Table
                 columns={columns}
                 dataSource={attributes}
-                pagination={{ pageSize: 8 }}
                 loading={isFetching}
+                pagination={{
+                    pageSize: filter.limit ? filter.limit : 8,
+                    current: page ? +page : 1,
+                    total: pagination?.total || 1,
+                    onChange: (e) => handleChange("pagination", e)
+                }}
             />
 
             <AttributesDrawer
@@ -200,6 +243,7 @@ const ManageAttributes = () => {
                 action={action}
                 category={categories}
                 data={updateData}
+                limit={filter.limit}
             />
 
             <Modal

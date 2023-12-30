@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { Space, Col, Button, Table, Row, Input, Modal, Typography } from 'antd'
 import { PlusOutlined, RedoOutlined } from '@ant-design/icons'
 
@@ -16,7 +16,7 @@ const AttributesValue = () => {
     const navigate = useNavigate()
 
     const isFetching = useSelector(state => state.attributes.value.isFetching)
-    const data = useSelector(state => state.attributes.value.value)
+    const data = useSelector(state => state.attributes.value?.value)
     const attributesValue = useSelector(state => state.attributes.value.value?.data)?.map((item, index) => {
         return { ...item, key: index + 1 }
     })
@@ -30,9 +30,9 @@ const AttributesValue = () => {
 
     const columns = [
         {
-            title: 'No',
-            dataIndex: 'key',
-            key: 'key',
+            title: 'ValueId',
+            dataIndex: 'id',
+            key: 'id',
         },
         {
             title: 'Attributes Value',
@@ -53,8 +53,15 @@ const AttributesValue = () => {
     ]
 
     const showDrawer = (action, record) => {
-        const checkPermission = account.find(item => item.url === "/attributes/create-value" || item.url === "/attributes/update-value")
-        if(checkPermission) {
+        const checkPermissionCreate = account.find(item => item.url === "/attributes/create-value")
+        const checkPermissionUpdate = account.find(item => item.url === "/attributes/update-value")
+        if (checkPermissionCreate) {
+            setIsDrawerOpen(true)
+            setAction(action)
+        } else {
+            navigate(`/error/403`)
+        }
+        if (checkPermissionUpdate) {
             setIsDrawerOpen(true)
             setAction(action)
             setUpdateData(record)
@@ -64,25 +71,38 @@ const AttributesValue = () => {
     }
 
     const showModal = (record) => {
-        setIsModalOpen(true)
-        setUpdateData(record)
+        const checkPermissionDelete = account.find(item => item.url === "/attributes/delete-value")
+        if (checkPermissionDelete) {
+            setIsModalOpen(true);
+            setUpdateData(record)
+        } else {
+            navigate(`/error/403`)
+        }
     }
 
     const handleDelete = async () => {
-        setLoading(true)
-        const res = await attributesApi.deleteAttributesValue(updateData.id)
-        if (res.st === 1) {
+        try {
+            setLoading(true)
+            const res = await attributesApi.deleteAttributesValue(updateData.id)
+            if (res.st === 1) {
+                setLoading(false)
+                setIsModalOpen(false)
+                dispatch(openNotification(
+                    { type: "success", message: res.msg, duration: 2, open: true }
+                ))
+                await getAttributesValue(dispatch, params.slug)
+            } else {
+                setLoading(false)
+                setIsModalOpen(false)
+                dispatch(openNotification(
+                    { type: "error", message: res.msg, duration: 2, open: true }
+                ))
+            }
+        } catch(err) {
             setLoading(false)
             setIsModalOpen(false)
             dispatch(openNotification(
-                { type: "success", message: res.msg, duration: 2, open: true }
-            ))
-            await getAttributesValue(dispatch, params.slug)
-        } else {
-            setLoading(false)
-            setIsModalOpen(false)
-            dispatch(openNotification(
-                { type: "error", message: res.msg, duration: 2, open: true }
+                { type: "error", message: "Something wrong!", duration: 2, open: true }
             ))
         }
     }
@@ -135,8 +155,8 @@ const AttributesValue = () => {
             <Table
                 columns={columns}
                 dataSource={attributesValue}
-                pagination={{ pageSize: 8 }}
                 loading={isFetching}
+                pagination={{ pageSize: 6 }}
             />
 
             <AttributesValueDrawer

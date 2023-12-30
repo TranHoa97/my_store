@@ -8,13 +8,20 @@ import { openNotification } from "../slice/notificationSlice"
 
 export const getImagesByFilter = async (dispatch, query) => {
     dispatch(getImageStart())
-    const res = await imageApi.getImagesByFilter(query)
-    if(res.st === 1) {
-        dispatch(getImageSuccess(res.data))
-    } else {
+    try {
+        const res = await imageApi.getImagesByFilter(query)
+        if(res.st === 1) {
+            dispatch(getImageSuccess(res.data))
+        } else {
+            dispatch(getImageFailed())
+            dispatch(openNotification(
+                { type:"error", message:res.msg, duration:2, open:true }
+            ))
+        }
+    } catch(err) {
         dispatch(getImageFailed())
         dispatch(openNotification(
-            { type:"error", message:res.msg, duration:2, open:true }
+            { type:"error", message:"Something wrong!", duration:2, open:true }
         ))
     }
 }

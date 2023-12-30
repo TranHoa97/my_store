@@ -12,7 +12,7 @@ const FormOrder = (props) => {
     const phoneRef = useRef()
     const addressRef = useRef()
 
-    const handleSubmit = async(e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault()
         const item = e.target
         if (!item.username.value) {
@@ -32,22 +32,30 @@ const FormOrder = (props) => {
         }
 
         if (item.username.value && item.phone.value && item.address.value) {
-            props.loading(true)
-            const res = await orderApi.createOrder({
-                orders: props.data,
-                username: item.username.value,
-                phone: item.phone.value,
-                address: item.address.value
-            })
-            if(res.st === 1) {
-                // console.log("success");
-                props.orderStatus("Đặt hàng thành công")
-                props.loading(false)
-                dispatch(clearItem())
-            } else {
-                // console.log(res.msg);
+            try {
+                props.loading(true)
+                const res = await orderApi.createOrder({
+                    orders: props.data,
+                    username: item.username.value,
+                    phone: item.phone.value,
+                    address: item.address.value
+                })
+                if (res.st === 1) {
+                    // console.log("success");
+                    props.orderStatus("Đặt hàng thành công")
+                    props.loading(false)
+                    dispatch(clearItem())
+                    window.scrollTo(0, 0)
+                } else {
+                    // console.log(res.msg);
+                    props.orderStatus("Đặt hàng không thành công")
+                    props.loading(false)
+                    window.scrollTo(0, 0)
+                }
+            } catch (err) {
                 props.orderStatus("Đặt hàng không thành công")
                 props.loading(false)
+                window.scrollTo(0, 0)
             }
         }
     }

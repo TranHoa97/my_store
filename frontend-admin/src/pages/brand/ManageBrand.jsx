@@ -1,15 +1,14 @@
 import React, { useEffect, useState } from 'react'
-import { Space, Col, Button, Table, Row, Input, Select, Modal,Typography } from 'antd'
+import { Space, Col, Button, Table, Row, Input, Select, Modal, Typography } from 'antd'
 import { PlusOutlined, RedoOutlined } from '@ant-design/icons'
 import { useDispatch, useSelector } from 'react-redux'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import _ from "lodash"
 import { debounce } from "lodash";
 
 import BrandDrawer from '../../components/brand/BrandDrawer'
 import { openNotification } from '../../redux/slice/notificationSlice'
 import { getBrandsByFilter } from '../../redux/brand/brandRequest'
-import { getAllCategories } from '../../redux/category/categoryRequest'
+import { getCategoryByFilter } from '../../redux/category/categoryRequest'
 import brandApi from '../../services/BrandApi'
 import { setMenu } from '../../redux/slice/menuSiderSlice'
 
@@ -19,31 +18,37 @@ const ManageBrand = () => {
 
     const dispatch = useDispatch()
     const navigate = useNavigate()
-    let [searchParams, setSearchParams] = useSearchParams();
     const location = useLocation()
+    let [searchParams, setSearchParams] = useSearchParams();
     const category = searchParams.get("category")
+    const page = searchParams.get("page")
     const search = searchParams.get("search")
 
     const isFetching = useSelector(state => state.brand.isFetching)
-    const categories = useSelector(state => state.category.value)?.map(item => {
+    const categories = useSelector(state => state.category.value?.data)?.map(item => {
         return { value: item.id, label: item.label }
     })
-    const brands = useSelector(state => state.brand.value)?.map((item, index) => {
+    const brands = useSelector(state => state.brand.value?.data)?.map((item, index) => {
         return { ...item, key: index + 1 }
     })
+    const pagination = useSelector(state => state.brand.value?.pagination)
     const account = useSelector(state => state.auth.login.value).groupWithRoles.roles
 
     const [isDrawerOpen, setIsDrawerOpen] = useState(false)
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [action, setAction] = useState(null)
-    const [brand, setBrand] = useState(null)
+    const [updateData, setUpdateData] = useState(null)
     const [loading, setLoading] = useState(null)
+    const [filter, setFilter] = useState({
+        page: +page || 1,
+        limit: 6,
+    })
 
     const columns = [
         {
-            title: 'No',
-            dataIndex: 'key',
-            key: 'key',
+            title: 'BrandId',
+            dataIndex: 'id',
+            key: 'id',
         },
         {
             title: 'Brand Name',
@@ -53,8 +58,8 @@ const ManageBrand = () => {
         },
         {
             title: 'Category',
-            dataIndex: 'category',
-            key: 'category',
+            dataIndex: 'category_label',
+            key: 'category_label',
             render: (text) => <div style={{ textTransform: "capitalize" }}>{text}</div>
         },
         {
@@ -70,76 +75,108 @@ const ManageBrand = () => {
     ]
 
     const showDrawer = (action, record) => {
-        const checkPermission = account.find(item => item.url === "/brand/create" || item.url === "/brand/update")
-        if(checkPermission) {
+        const checkPermissionCreate = account.find(item => item.url === "/brand/create")
+        const checkPermissionUpdate = account.find(item => item.url === "/brand/update")
+        if (checkPermissionCreate) {
             setIsDrawerOpen(true)
             setAction(action)
-            setBrand(record)
+        } else {
+            navigate(`/error/403`)
+        }
+        if (checkPermissionUpdate) {
+            setIsDrawerOpen(true)
+            setAction(action)
+            setUpdateData(record)
         } else {
             navigate(`/error/403`)
         }
     }
 
     const showModal = (record) => {
-        setIsModalOpen(true)
-        setBrand(record)
+        const checkPermissionDelete = account.find(item => item.url === "/brand/delete")
+        if (checkPermissionDelete) {
+            setIsModalOpen(true);
+            setUpdateData(record)
+        } else {
+            navigate(`/error/403`)
+        }
     }
+
+    const handleChange = debounce((type, e) => {
+        // console.log(e);
+        let newFilter = filter
+        switch (type) {
+            case "pagination":
+                setFilter({ ...filter, page: e })
+                newFilter = { ...filter, page: e }
+                break;
+            case "category":
+                if (e === "all") {
+                    let { category, ...others } = filter
+                    setFilter({ ...others, page: 1 })
+                    newFilter = { ...others, page: 1 }
+                } else {
+                    setFilter({ ...filter, page: 1, category: e })
+                    newFilter = { ...filter, page: 1, category: e }
+                }
+                break;
+            case "search":
+                let keyword = e.target.value
+                if (keyword) {
+                    setFilter({ ...filter, page: 1, search: keyword })
+                    newFilter = { ...filter, page: 1, search: keyword }
+                } else {
+                    let { search, ...others } = filter
+                    setFilter({ ...others, page: 1 })
+                    newFilter = { ...others, page: 1 }
+                }
+                break;
+        }
+        setSearchParams(newFilter)
+    }, 500)
 
     const handleDelete = async () => {
-        setLoading(true)
-        const res = await brandApi.deleteBrand(brand.id)
-        if (res.st === 1) {
+        try {
+            setLoading(true)
+            const res = await brandApi.deleteBrand(updateData.id)
+            if (res.st === 1) {
+                setLoading(false)
+                setIsModalOpen(false)
+                dispatch(openNotification(
+                    { type: "success", message: res.msg, duration: 2, open: true }
+                ))
+                if (updateData.category_id === +category) {
+                    getBrandsByFilter(dispatch, `?page=1&limit=${filter.limit}&category=${updateData.category_id}`)
+                } else {
+                    setSearchParams({ page: 1, limit: filter.limit, category: updateData.category_id })
+                }
+            } else {
+                setLoading(false)
+                setIsModalOpen(false)
+                dispatch(openNotification(
+                    { type: "error", message: res.msg, duration: 2, open: true }
+                ))
+            }
+        } catch (err) {
             setLoading(false)
             setIsModalOpen(false)
             dispatch(openNotification(
-                { type: "success", message: res.msg, duration: 2, open: true }
-            ))
-            refreshData()
-        } else {
-            setLoading(false)
-            setIsModalOpen(false)
-            dispatch(openNotification(
-                { type: "error", message: res.msg, duration: 2, open: true }
+                { type: "error", message: "Something wrong! ", duration: 2, open: true }
             ))
         }
-    }
-
-    const handleSearch = debounce(async(e) => {
-        let keyword = e.target.value.toLowerCase().replaceAll(" ", "-")
-        if(category) {
-            setSearchParams({ category: category, search: keyword })
-        } else {
-            setSearchParams({ search: keyword })
-        }
-    }, 1000)
-
-    const handleChange = (e) => {
-        if(e === "all") {
-            if(search) {
-                setSearchParams({ search: search })
-            } else {
-                setSearchParams({})
-            }
-        } else {
-            if(search) {
-                setSearchParams({ category: e, search: search })
-            } else {
-                setSearchParams({ category: e })
-            }
-        }
-    }
-
-    const refreshData = () => {
-        getBrandsByFilter(dispatch, location.search)
     }
 
     useEffect(() => {
         dispatch(setMenu(["6"]))
-        getAllCategories(dispatch)
+        getCategoryByFilter(dispatch)
     }, [])
 
     useEffect(() => {
-        refreshData()
+        if (location.search) {
+            getBrandsByFilter(dispatch, location.search)
+        } else {
+            getBrandsByFilter(dispatch, `?page=1&limit=${filter.limit}`)
+        }
     }, [searchParams])
 
     return (
@@ -149,7 +186,7 @@ const ManageBrand = () => {
                 <Space size={"middle"}>
                     <Button
                         icon={<RedoOutlined />}
-                        onClick={() => refreshData()}
+                        onClick={() => getBrandsByFilter(dispatch, location.search ? location.search : `?page=1&limit=${filter.limit}`)}
                     >
                         Refresh
                     </Button>
@@ -169,19 +206,19 @@ const ManageBrand = () => {
                         <Select
                             placeholder={`Please Select...`}
                             options={categories ? [...categories, { value: "all", label: "all" }] : []}
-                            onChange={handleChange}
-                            value={category ? Number(category) : "all"}
+                            onChange={(e) => handleChange("category", e)}
+                            value={category ? +category : "all"}
                             style={{ minWidth: "200px", textTransform: "capitalize" }}
                         />
                     </Row>
                 </Col>
-                <Col span={10}>
+                <Col span={12}>
                     <Search
-                        placeholder="input search brand name"
-                        allowClear
-                        onChange={handleSearch}
-                        enterButton
+                        placeholder="input search brand label, slug, id..."
+                        onChange={(e) => handleChange("search", e)}
                         defaultValue={search}
+                        allowClear
+                        enterButton
                     />
                 </Col>
             </Row>
@@ -189,8 +226,13 @@ const ManageBrand = () => {
             <Table
                 columns={columns}
                 dataSource={brands}
-                pagination={{ pageSize: 8 }}
                 loading={isFetching}
+                pagination={{
+                    pageSize: filter.limit ? filter.limit : 6,
+                    current: page ? +page : 1,
+                    total: pagination?.total || 1,
+                    onChange: (e) => handleChange("pagination", e)
+                }}
             />
 
 
@@ -199,7 +241,8 @@ const ManageBrand = () => {
                 open={isDrawerOpen}
                 action={action}
                 category={categories}
-                data={brand}
+                data={updateData}
+                limit={filter.limit}
             />
 
             <Modal

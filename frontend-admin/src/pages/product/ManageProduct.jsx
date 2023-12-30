@@ -3,10 +3,9 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useSearchParams, Link, useLocation, useNavigate } from 'react-router-dom'
 import { Space, Col, Button, Table, Row, Input, Select, Modal, Typography } from 'antd'
 import { PlusOutlined, RedoOutlined } from '@ant-design/icons'
-import _ from "lodash"
 import { debounce } from "lodash";
 
-import { getAllCategories } from '../../redux/category/categoryRequest'
+import { getCategoryByFilter } from '../../redux/category/categoryRequest'
 import { getProductsByFilter } from '../../redux/product/productRequest'
 import { setMenu } from '../../redux/slice/menuSiderSlice'
 import productApi from '../../services/ProductApi'
@@ -23,33 +22,39 @@ const ManageProduct = () => {
   const dispatch = useDispatch()
   const location = useLocation()
   const navigate = useNavigate()
-  let [searchParams, setSearchParams] = useSearchParams();
-  const categoryId = searchParams.get("categoryId")
+  let [searchParams, setSearchParams] = useSearchParams()
+  const category = searchParams.get("category")
+  const page = searchParams.get("page")
   const search = searchParams.get("search")
 
   const isFetching = useSelector(state => state.product.isFetching)
-  const products = useSelector(state => state.product.value)?.map((item, index) => {
+  const products = useSelector(state => state.product.value)?.data.map((item, index) => {
     return { ...item, key: index + 1 }
   })
-  const categories = useSelector(state => state.category.value)?.map(item => {
+  const categories = useSelector(state => state.category.value)?.data.map(item => {
     return { value: item.id, label: item.label }
   })
-  const brands = useSelector(state => state.brand.value)?.map((item) => {
+  const brands = useSelector(state => state.brand.value)?.data.map((item) => {
     return { value: item.id, label: item.label, category_id: item.category_id }
   })
-  const attributes = useSelector(state => state.attributes.attributes.value)
+  const attributes = useSelector(state => state.attributes.attributes.value?.data)
+  const pagination = useSelector(state => state.product.value)?.pagination
   const account = useSelector(state => state.auth.login.value).groupWithRoles.roles
 
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isUpdateOpen, setIsUpdateOpen] = useState(false)
   const [updateData, setUpdateData] = useState(null)
   const [loading, setLoading] = useState(null)
-  const [isUpdateOpen, setIsUpdateOpen] = useState(false)
+  const [filter, setFilter] = useState({
+    page: page ? +page : 1,
+    limit: 4,
+  })
 
   const columns = [
     {
-      title: 'No',
-      dataIndex: 'key',
-      key: 'key',
+      title: 'ProId',
+      dataIndex: 'id',
+      key: 'id',
     },
     {
       title: 'Product Name',
@@ -61,7 +66,13 @@ const ManageProduct = () => {
       title: 'Image',
       dataIndex: 'thumbnail',
       key: 'thumbnail',
-      render: (thumb) => <div><img style={{ width: "80px" }} src={thumb ? thumb : ""} /></div>
+      render: (thumb) => <div><img style={{ width: "50px" }} src={thumb ? thumb : ""} /></div>
+    },
+    {
+      title: 'Category',
+      dataIndex: 'category_label',
+      key: 'category_label',
+      render: (text) => <div style={{ textTransform: "capitalize" }}>{text}</div>
     },
     {
       title: 'Variants',
@@ -88,7 +99,7 @@ const ManageProduct = () => {
   ]
 
   const showAdd = () => {
-    const checkPermission = account.find(item => item.url === "/products/create" || item.url === "/products/update")
+    const checkPermission = account.find(item => item.url === "/products/create")
     if (checkPermission) {
       navigate(`/products/add`)
     } else {
@@ -97,7 +108,7 @@ const ManageProduct = () => {
   }
 
   const showUpdate = (record) => {
-    const checkPermission = account.find(item => item.url === "/products/create" || item.url === "/products/update")
+    const checkPermission = account.find(item => item.url === "/products/update")
     if (checkPermission) {
       setIsUpdateOpen(true)
       setUpdateData(record)
@@ -107,67 +118,97 @@ const ManageProduct = () => {
   }
 
   const showModal = (record) => {
-    setIsModalOpen(true);
-    setUpdateData(record)
+    const checkPermissionDelete = account.find(item => item.url === "/products/delete")
+    if (checkPermissionDelete) {
+      setIsModalOpen(true);
+      setUpdateData(record)
+    } else {
+      navigate(`/error/403`)
+    }
   };
 
+  const handleChange = debounce((type, e) => {
+    // console.log(e);
+    let newFilter = {}
+    switch (type) {
+      case "pagination":
+        if(category) {
+          setFilter({ ...filter, category: category, page: e })
+          newFilter = { ...filter, category: category, page: e }
+        } else {
+          setFilter({ ...filter, page: e })
+          newFilter = { ...filter, page: e }
+        }
+        break;
+      case "category":
+        if (e === "all") {
+          let { category, ...others } = filter
+          setFilter({ ...others, page: 1 })
+          newFilter = { ...others, page: 1 }
+        } else {
+          setFilter({ ...filter, page: 1, category: e })
+          newFilter = { ...filter, page: 1, category: e }
+        }
+        break;
+      case "search":
+        let keyword = e.target.value
+        if (keyword) {
+          setFilter({ ...filter, page: 1, search: keyword })
+          newFilter = { ...filter, page: 1, search: keyword }
+        } else {
+          let { search, ...others } = filter
+          setFilter({ ...others, page: 1 })
+          newFilter = { ...others, page: 1 }
+        }
+        break;
+    }
+    setSearchParams(newFilter)
+  }, 500)
+
   const handleDelete = async () => {
-    setLoading(true)
-    const res = await productApi.deleteProduct(updateData.id, updateData.thumbname)
-    if (res.st === 1) {
+    try {
+      setLoading(true)
+      const res = await productApi.deleteProduct(updateData.id, updateData.thumbname)
+      if (res.st === 1) {
+        setLoading(false)
+        setIsModalOpen(false)
+        dispatch(openNotification(
+          { type: "success", message: res.msg, duration: 2, open: true }
+        ))
+        if (updateData.category_id === +category) {
+          getProductsByFilter(dispatch, `?page=1&limit=${filter.limit}&category=${updateData.category_id}`)
+        } else {
+          setSearchParams({ page: 1, limit: filter.limit, category: updateData.category_id })
+        }
+      } else {
+        setLoading(false)
+        setIsModalOpen(false)
+        dispatch(openNotification(
+          { type: "error", message: res.msg, duration: 2, open: true }
+        ))
+      }
+    } catch (err) {
       setLoading(false)
       setIsModalOpen(false)
       dispatch(openNotification(
-        { type: "success", message: res.msg, duration: 2, open: true }
-      ))
-      refreshData()
-    } else {
-      setLoading(false)
-      setIsModalOpen(false)
-      dispatch(openNotification(
-        { type: "error", message: res.msg, duration: 2, open: true }
+        { type: "error", message: "Something wrong!", duration: 2, open: true }
       ))
     }
-  }
-
-  const handleChange = (e) => {
-    if (e === "all") {
-      if (search) {
-        setSearchParams({ search: search })
-      } else {
-        setSearchParams({})
-      }
-    } else {
-      if (search) {
-        setSearchParams({ categoryId: e, search: search })
-      } else {
-        setSearchParams({ categoryId: e })
-      }
-    }
-  }
-
-  const handleSearch = debounce(async (e) => {
-    let keyword = e.target.value.toLowerCase().replaceAll(" ", "-")
-    if (categoryId) {
-      setSearchParams({ categoryId: categoryId, search: keyword })
-    } else {
-      setSearchParams({ search: keyword })
-    }
-  }, 1000)
-
-  const refreshData = () => {
-    getProductsByFilter(dispatch, location.search)
   }
 
   useEffect(() => {
     dispatch(setMenu(["10", "sub3"]))
-    getAllCategories(dispatch)
+    getCategoryByFilter(dispatch)
     getBrandsByFilter(dispatch)
     getAttributesByFilter(dispatch)
   }, [])
 
   useEffect(() => {
-    refreshData()
+    if (location.search) {
+      getProductsByFilter(dispatch, location.search)
+    } else {
+      getProductsByFilter(dispatch, `?page=1&limit=${filter.limit}`)
+    }
   }, [searchParams])
 
   return (
@@ -180,6 +221,7 @@ const ManageProduct = () => {
             brands={brands}
             attributes={attributes}
             onClose={() => setIsUpdateOpen(false)}
+            limit={filter.limit}
           />
         ) : (
           <Space direction={"vertical"} size={"middle"} style={{ width: "100%" }}>
@@ -188,7 +230,7 @@ const ManageProduct = () => {
               <Space size={"middle"}>
                 <Button
                   icon={<RedoOutlined />}
-                  onClick={() => refreshData()}
+                  onClick={() => getProductsByFilter(dispatch, location.search ? location.search : `?page=1&limit=${filter.limit}`)}
                 >
                   Refresh
                 </Button>
@@ -208,18 +250,19 @@ const ManageProduct = () => {
                   <Select
                     placeholder={`Please Select...`}
                     options={categories ? [...categories, { value: "all", label: "all" }] : []}
-                    allowClear
-                    onChange={handleChange}
-                    value={categoryId ? Number(categoryId) : "all"}
+                    onChange={(e) => handleChange("category", e)}
+                    value={category ? +category : "all"}
                     style={{ minWidth: "200px", textTransform: "capitalize" }}
+                    allowClear
                   />
                 </Row>
               </Col>
-              <Col span={10}>
+              <Col span={12}>
                 <Search
-                  placeholder="input search product id, product name..."
+                  placeholder="input search product name, slug, id..."
+                  onChange={(e) => handleChange("search", e)}
+                  defaultValue={search}
                   allowClear
-                  onChange={handleSearch}
                   enterButton
                 />
               </Col>
@@ -227,18 +270,23 @@ const ManageProduct = () => {
             <Table
               columns={columns}
               dataSource={products}
-              pagination={{ pageSize: 4 }}
               loading={isFetching}
+              pagination={{
+                pageSize: filter.limit ? filter.limit : 8,
+                current: page ? +page : 1,
+                total: pagination?.total,
+                onChange: (e) => handleChange("pagination", e)
+              }}
             />
             <Modal
               title={"Delete Group"}
+              style={{ top: 20 }}
               open={isModalOpen}
               onOk={handleDelete}
               onCancel={() => setIsModalOpen(false)}
-              style={{ top: 20 }}
               confirmLoading={loading}
             >
-              <p>Do you want to delete user ?</p>
+              <p>Do you want to delete product ?</p>
             </Modal>
           </Space>
         )

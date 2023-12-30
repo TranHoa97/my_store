@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useDispatch } from 'react-redux'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import SlickCarousel from '../SlickCarousel/SlickCarousel'
 import numberWithCommas from '../../../utils/numberWithCommas'
 
@@ -19,7 +19,7 @@ const ProductView = (props) => {
     const handleChange = (id) => {
         const newVariants = variants.find(item => item.id === id)
         setView(newVariants)
-        setColor(newVariants.colors[0].id)
+        setColor(newVariants.colors[0]?.id)
     }
 
     const handleChangeColor = (id) => {
@@ -41,8 +41,16 @@ const ProductView = (props) => {
     }
 
     useEffect(() => {
-        setColor(view.colors[0].id)
-    }, [])
+        if(variants) {
+            setView(variants[0])
+        }
+    }, [variants])
+
+    useEffect(() => {
+        if(view.colors.length > 0) {
+            setColor(view.colors[0].id)
+        }
+    }, [view])
 
     return (
         <div className="product-view">
@@ -53,13 +61,13 @@ const ProductView = (props) => {
                     {
                         images ? (
                             <SlickCarousel
-                                slide={images}
+                                data={images}
                                 dots={false}
-                                mainSlideArrow={true}
-                                subSlideArrow={true}
+                                arrow={true}
                                 asNavFor={true}
-                                mainShow={1}
+                                show={1}
                                 responsive={1}
+                                product={false}
                             />
                         ) : (<></>)
                     }

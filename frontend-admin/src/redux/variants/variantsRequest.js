@@ -6,28 +6,22 @@ import {
 } from "./variantsSlice"
 import { openNotification } from "../slice/notificationSlice"
 
-export const getAllVariants = async (dispatch) => {
+export const getVariantByFilter = async (dispatch, query) => {
     dispatch(getVariantsStart())
-    const res = await variantsApi.getAllVariants()
-    if(res.st === 1) {
-        dispatch(getVariantsSuccess(res.data))
-    } else {
+    try {
+        const res = await variantsApi.getVariantByFilter(query)
+        if(res.st === 1) {
+            dispatch(getVariantsSuccess(res.data))
+        } else {
+            dispatch(getVariantsFailed())
+            dispatch(openNotification(
+                { type:"error", message:res.msg, duration:3, open:true }
+            ))
+        }
+    } catch(err) {
         dispatch(getVariantsFailed())
         dispatch(openNotification(
-            { type:"error", message:res.msg, duration:2, open:true }
-        ))
-    }
-}
-
-export const getVariantsByProduct = async (dispatch, productId) => {
-    dispatch(getVariantsStart())
-    const res = await variantsApi.getVariants(productId)
-    if(res.st === 1) {
-        dispatch(getVariantsSuccess(res.data))
-    } else {
-        dispatch(getVariantsFailed())
-        dispatch(openNotification(
-            { type:"error", message:res.msg, duration:2, open:true }
+            { type:"error", message:"Something wrong!", duration:3, open:true }
         ))
     }
 }

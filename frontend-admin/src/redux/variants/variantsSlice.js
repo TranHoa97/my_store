@@ -16,6 +16,7 @@ export const variantsSlice = createSlice({
         getVariantsSuccess: (state, action) => {
             state.isFetching = false
             state.value = action.payload
+            state.error = false
         },
         getVariantsFailed: (state) => {
             state.isFetching = false

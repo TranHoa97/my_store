@@ -13,16 +13,16 @@ module.exports = {
                 type: Sequelize.STRING
             },
             price: {
-                type: Sequelize.STRING
+                type: Sequelize.BIGINT
             },
             quantity: {
-                type: Sequelize.STRING
+                type: Sequelize.BIGINT
             },
             sold: {
-                type: Sequelize.STRING
+                type: Sequelize.BIGINT
             },
             description: {
-                type: Sequelize.STRING
+                type: Sequelize.TEXT
             },
             slug: {
                 type: Sequelize.STRING

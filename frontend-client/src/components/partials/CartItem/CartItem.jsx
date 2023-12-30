@@ -43,7 +43,7 @@ const CartItem = (props) => {
                     <div className='cart-item__info__footer__left'>
                         <div>
                             <p>Màu sắc</p>
-                            <span style={{ textTransform: "capitalize"}}>{item.color.label}</span>
+                            <span style={{ textTransform: "capitalize"}}>{item.color?.label}</span>
                         </div>
                         <div>
                             <p>Số lượng</p>

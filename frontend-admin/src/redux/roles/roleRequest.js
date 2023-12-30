@@ -8,13 +8,20 @@ import {
 
 export const getAllRoles = async (dispatch) => {
     dispatch(getRoleStart())
-    const res = await roleApi.getAllRoles()
-    if(res.st === 1) {
-        dispatch(getRoleSuccess(res.data))
-    } else {
+    try {
+        const res = await roleApi.getAllRoles()
+        if(res.st === 1) {
+            dispatch(getRoleSuccess(res.data))
+        } else {
+            dispatch(getRoleFailed())
+            dispatch(openNotification(
+                { type: "error", message: res.msg, duration: 3, open: true }
+            ))
+        }
+    } catch(err) {
         dispatch(getRoleFailed())
         dispatch(openNotification(
-            {type:"error", message:res.msg, duration:2, open:true}
+            { type: "error", message: "Something wrong!", duration: 2, open: true }
         ))
     }
 }

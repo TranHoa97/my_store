@@ -1,13 +1,11 @@
-import React, { useState } from "react";
+import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button, Form, Input, Row, Col, Space } from 'antd';
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import { registerUser } from "../../redux/auth/authRequest";
 import { openNotification } from "../../redux/slice/notificationSlice";
 
 const RegisterPage = () => {
-
-    const isFetching = useSelector(state => state.auth.register.isFetching)
 
     const [form] = Form.useForm()
     const dispatch = useDispatch()

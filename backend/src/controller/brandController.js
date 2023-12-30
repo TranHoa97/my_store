@@ -4,29 +4,58 @@ require("dotenv").config()
 const brandController = {
     getBrands: async (req, res) => {
         try {
-            const { category, search } = req.query
+            const { category, search, page, limit } = req.query
 
-            let sql = `select brand.*, category.label as category from brand 
+            let sql = `select 
+            brand.*, 
+            category.label as category_label 
+            from brand 
             left join category on brand.category_id = category.id
-            where brand.id > 0`
-            
+            where brand.id is not null`
+
+            let sqlTotal = `select count(*) as count from brand where id is not null`
+  
             if(category) {
                 sql += ` and brand.category_id = ${category}`
+                sqlTotal += ` and brand.category_id = ${category}`
             }
 
             if(search) {
-                const newSearch = search.toLowerCase().replaceAll("-", " ")
-                sql += ` and brand.label like "%${newSearch}%"`
+                sql += ` and (brand.label like "%${search}%" 
+                or brand.slug like "%${search}%"
+                or brand.id like "%${search}%")`
+
+                sqlTotal += ` and (brand.label like "%${search}%" 
+                or brand.slug like "%${search}%"
+                or brand.id like "%${search}%")`
             }
 
             sql += ` order by brand.category_id asc`
 
+            if(limit) {
+                sql += ` limit ${limit}`
+            }
+
+            if(page) {
+                const offset = (page - 1) * limit
+                sql += ` offset ${offset}`
+            }
+
             const [brands] = await db.execute(sql)
+
+            const [totalBrand] = await db.execute(sqlTotal)
             
             return res.status(200).json({
                 st: 1,
                 msg: "Get brand successfully!",
-                data: brands.length > 0 ? brands : []
+                data: {
+                    data: brands.length > 0 ? brands : [],
+                    pagination: {
+                        page: +page,
+                        limit: +limit,
+                        total: +(totalBrand[0]?.count),
+                    }
+                }
             })
 
         } catch (err) {

@@ -1,33 +1,34 @@
 import express from "express"
 const router = express.Router()
 import attributesController from "../controller/attributeController"
-import auth from "../middleware/auth"
+
+import { checkUserJwt, checkUserPermisson } from "../middleware/auth"
 
 const attributesRoute = (app) => {
     // GET ATTRIBUTES
-    router.get("/read", auth.checkUserJwt, auth.checkUserPermisson, attributesController.getAttributes)
+    router.get("/read", checkUserJwt, checkUserPermisson, attributesController.getAttributes)
 
     // CREATE
-    router.post("/create", auth.checkUserJwt, auth.checkUserPermisson, attributesController.createAttributes)
+    router.post("/create", checkUserJwt, checkUserPermisson, attributesController.createAttributes)
 
     // UPDATE
-    router.put("/update", auth.checkUserJwt, auth.checkUserPermisson, attributesController.updateAttributes)
+    router.put("/update", checkUserJwt, checkUserPermisson, attributesController.updateAttributes)
 
     // DELETE
-    router.delete("/delete", auth.checkUserJwt, auth.checkUserPermisson, attributesController.deleteAttributes)
+    router.delete("/delete", checkUserJwt, checkUserPermisson, attributesController.deleteAttributes)
 
 
     // GET ATTRIBUTES VALUE
-    router.get("/read-value", auth.checkUserJwt, auth.checkUserPermisson, attributesController.getAttributesValue)
+    router.get("/read-value", checkUserJwt, checkUserPermisson, attributesController.getAttributesValue)
 
     // CREATE ATTRIBUTES VALUE
-    router.post("/create-value", auth.checkUserJwt, auth.checkUserPermisson, attributesController.createAttributesValue)
+    router.post("/create-value", checkUserJwt, checkUserPermisson, attributesController.createAttributesValue)
 
     // UPDATE ATTRIBUTES VALUE
-    router.put("/update-value", auth.checkUserJwt, auth.checkUserPermisson, attributesController.updateAttributesValue)
+    router.put("/update-value", checkUserJwt, checkUserPermisson, attributesController.updateAttributesValue)
 
     // DELETE ATTRIBUTES VALUE
-    router.delete("/delete-value", auth.checkUserJwt, auth.checkUserPermisson, attributesController.deleteAttributesValue)
+    router.delete("/delete-value", checkUserJwt, checkUserPermisson, attributesController.deleteAttributesValue)
 
     return app.use("/attributes", router)
 }

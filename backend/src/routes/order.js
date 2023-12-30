@@ -1,21 +1,21 @@
 import express from "express"
 import orderController from "../controller/orderController"
-import auth from "../middleware/auth"
+import { checkUserJwt, checkUserPermisson } from "../middleware/auth"
 
 const router = express.Router()
 
 const orderRoute = (app) => {
     // GET
-    router.get("/read", auth.checkUserJwt, auth.checkUserPermisson, orderController.getOrders)
+    router.get("/read", checkUserJwt, checkUserPermisson, orderController.getOrders)
 
     // CREATE
-    router.post("/create", auth.checkUserJwt, auth.checkUserPermisson, orderController.createOrder)
+    router.post("/create", checkUserJwt, checkUserPermisson, orderController.createOrder)
     
     // UPDATE
-    router.put("/update", auth.checkUserJwt, auth.checkUserPermisson, orderController.updateOrder)
+    router.put("/update", checkUserJwt, checkUserPermisson, orderController.updateOrder)
     
     // DELETE
-    router.delete("/delete", auth.checkUserJwt, auth.checkUserPermisson, orderController.deleteOrder)
+    router.delete("/delete", checkUserJwt, checkUserPermisson, orderController.deleteOrder)
 
     return app.use("/orders", router)
 }

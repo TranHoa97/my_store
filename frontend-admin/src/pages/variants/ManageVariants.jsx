@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Space, Button, Table, Row, Modal, Typography,Col } from 'antd'
+import { useNavigate, useParams } from 'react-router-dom'
+import { Space, Button, Table, Row, Modal, Typography } from 'antd'
 import { PlusOutlined, RedoOutlined } from '@ant-design/icons'
 
 import VariantsDrawer from '../../components/variants/VariantsDrawer'
-import { getVariantsByProduct } from '../../redux/variants/variantsRequest'
+import { getVariantByFilter } from '../../redux/variants/variantsRequest'
 import variantsApi from '../../services/VariantsApi'
 import { openNotification } from '../../redux/slice/notificationSlice'
+import numberWithCommas from '../../ultis/numberWithCommas'
 
 const ManageVariants = () => {
 
@@ -29,9 +30,9 @@ const ManageVariants = () => {
 
     const columns = [
         {
-            title: 'No',
-            dataIndex: 'key',
-            key: 'key',
+            title: 'VariantId',
+            dataIndex: 'id',
+            key: 'id',
         },
         {
             title: 'Variants Name',
@@ -43,6 +44,7 @@ const ManageVariants = () => {
             title: 'Price',
             dataIndex: 'price',
             key: 'price',
+            render: (number) => <div>{numberWithCommas(+number)}</div>
         },
         {
             title: 'Qty',
@@ -87,8 +89,15 @@ const ManageVariants = () => {
     ]
 
     const showDrawer = (action, record) => {
-        const checkPermission = account.find(item => item.url === "/variants/create" || item.url === "/variants/update")
-        if(checkPermission) {
+        const checkPermissionCreate = account.find(item => item.url === "/variants/create")
+        const checkPermissionUpdate = account.find(item => item.url === "/variants/update")
+        if(checkPermissionCreate) {
+            setIsDrawerOpen(true)
+            setAction(action)
+        } else {
+            navigate(`/error/403`)
+        }
+        if(checkPermissionUpdate) {
             setIsDrawerOpen(true)
             setAction(action)
             setUpdateData(record)
@@ -98,23 +107,36 @@ const ManageVariants = () => {
     }
 
     const showModal = (record) => {
-        setIsModalOpen(true)
-        setUpdateData(record)
+        const checkPermissionDelete = account.find(item => item.url === "/variants/delete")
+        if(checkPermissionDelete) {
+            setIsModalOpen(true);
+            setUpdateData(record)
+        } else {
+            navigate(`/error/403`)
+        }
     }
 
     const handleDelete = async () => {
-        setLoading(true)
-        const res = await variantsApi.deleteVariants(updateData.id)
-        if (res.st === 1) {
+        try {
+            setLoading(true)
+            const res = await variantsApi.deleteVariants(updateData.id)
+            if (res.st === 1) {
+                dispatch(openNotification(
+                    { type: "success", message: res.msg, duration: 2, open: true }
+                ))
+                setIsModalOpen(false)
+                setLoading(false)
+                await getVariantByFilter(dispatch, `?productId=${params.slug}`)
+            } else {
+                dispatch(openNotification(
+                    { type: "error", message: res.msg, duration: 3, open: true }
+                ))
+                setIsModalOpen(false)
+                setLoading(false)
+            }
+        } catch(err) {
             dispatch(openNotification(
-                { type: "success", message: res.msg, duration: 2, open: true }
-            ))
-            setIsModalOpen(false)
-            setLoading(false)
-            await getVariantsByProduct(dispatch, params.slug)
-        } else {
-            dispatch(openNotification(
-                { type: "error", message: res.msg, duration: 2, open: true }
+                { type: "error", message: "Something wrong!", duration: 3, open: true }
             ))
             setIsModalOpen(false)
             setLoading(false)
@@ -124,7 +146,7 @@ const ManageVariants = () => {
     useEffect(() => {
         const checkPermission = account.find(item => item.url === "/variants/read")
         if(checkPermission) {
-            getVariantsByProduct(dispatch, params.slug)
+            getVariantByFilter(dispatch, `?productId=${params.slug}`)
         } else {
             navigate(`/error/403`)
         }
@@ -138,7 +160,7 @@ const ManageVariants = () => {
                     <Button onClick={() => navigate(-1)}>Back</Button>
                     <Button
                         icon={<RedoOutlined />}
-                        onClick={() => getVariantsByProduct(dispatch, params.slug)}
+                        onClick={() => getVariantByFilter(dispatch, `?productId=${params.slug}`)}
                     >
                         Refresh
                     </Button>
@@ -155,8 +177,8 @@ const ManageVariants = () => {
             <Table
                 columns={columns}
                 dataSource={variants}
-                pagination={{ pageSize: 8 }}
                 loading={isFetching}
+                pagination={{ pageSize: 6 }}
             />
 
             <VariantsDrawer
@@ -174,7 +196,7 @@ const ManageVariants = () => {
                 confirmLoading={loading}
                 style={{ top: 20 }}
             >
-                <p>Do you want to delete brand ?</p>
+                <p>Do you want to delete variant ?</p>
             </Modal>
         </Space>
     )

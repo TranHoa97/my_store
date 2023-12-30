@@ -3,7 +3,9 @@ import db from "../models/db"
 const orderController = {
     getOrders: async (req, res) => {
         try {
-            const { status, search } = req.query
+            const { status, search, page, limit } = req.query
+            console.log(status);
+            console.log(search);
 
             // Get Orders
             let sql = `select
@@ -23,24 +25,51 @@ const orderController = {
             left join order_detail on orders.id = order_detail.order_id
             where orders.id is not null`
 
+            let sqlTotal = `select count(*) as count from orders where id is not null`
+
             if (status) {
-                const newStatus = status.replaceAll("-", " ")
-                sql += ` and orders.status = "${newStatus}"`
+                sql += ` and orders.status = "${status}"`
+                sqlTotal += ` and status = "${status}"`
             }
 
             if (search) {
-                const newSearch = search.toLowerCase().replaceAll("-", " ")
-                sql += ` and orders.username like "%${newSearch}%"`
+                sql += ` and (orders.username like "%${search}%"
+                or orders.phone like "%${search}%"
+                or orders.address like "%${search}%"
+                or orders.id like "%${search}%")`
+
+                sqlTotal += ` and (username like "%${search}%"
+                or phone like "%${search}%"
+                or address like "%${search}%"
+                or id like "%${search}%")`
             }
 
             sql += ` group by orders.id`
 
+            if (limit) {
+                sql += ` limit ${limit}`
+            }
+
+            if (page) {
+                const offset = (page - 1) * limit
+                sql += ` offset ${offset}`
+            }
+
             const [orders] = await db.execute(sql)
+
+            const [totalOrder] = await db.execute(sqlTotal)
 
             return res.status(200).json({
                 st: 1,
                 msg: "Get orders successfully!",
-                data: orders.length > 0 ? orders : []
+                data: {
+                    data: orders.length > 0 ? orders : [],
+                    pagination: {
+                        page: +page,
+                        limit: +limit,
+                        total: +(totalOrder[0]?.count),
+                    }
+                }
             })
 
         } catch (err) {
@@ -111,13 +140,13 @@ const orderController = {
                 [address, username, phone, status, id]
             )
 
-            // Remove old order
+            // Remove old order_detail
             await db.execute(
                 `delete from order_detail where order_id = ?`,
                 [id]
             )
 
-            // Update new order
+            // Update new order_detail
             let newOrders = products.map(item => {
                 return `(${item.amount}, ${item.quantity}, ${item.variants_id}, ${id}, "${item.color}")`
             })

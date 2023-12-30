@@ -56,14 +56,14 @@ const variantsController = {
             const { title, slug, price, quantity, sold, description, ram, storage, colors, product_id, cpu, display, graphics, weight } = req.body
 
             const sql = `insert into variant
-            (product_id, ram, storage, title, price, quantity, sold, 
-            description, slug, cpu, display, graphics, weight) 
+            (product_id, title, price, quantity, sold, description, slug,
+            ram, storage, cpu, display, graphics, weight) 
             values (?,?,?,?,?,?,?,?,?,?,?,?,?)`
 
             // Insert variant
             const [insertVariant] = await db.execute(
                 sql,
-                [product_id, ram, storage, title, price, quantity, sold, description, slug, cpu || "", display || "", graphics || "", weight || ""]
+                [product_id, title, +price, +quantity, +sold, description, slug, ram || "", storage || "", cpu || "", display || "", graphics || "", weight || ""]
             )
 
             // Insert colors
@@ -98,7 +98,7 @@ const variantsController = {
                 set title = ?, slug = ?, price = ?, quantity = ?, sold = ?, description = ?, 
                 ram = ?, storage = ?, cpu = ?, display = ?, graphics = ?, weight= ? 
                 where id = ?`,
-                [title, slug, price, quantity, sold, description, ram, storage, cpu || "", display || "", graphics || "", weight || "", id]
+                [title, slug, +price, +quantity, +sold, description, ram, storage, cpu || "", display || "", graphics || "", weight || "", id]
             )
 
             // Update colors

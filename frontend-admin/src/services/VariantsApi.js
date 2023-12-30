@@ -1,16 +1,11 @@
 import axiosClient from "./AxiosClient"
 
 const variantsApi = {
-    getAllVariants() {
-        const url = `/variants/read`
-        return axiosClient.get(url)
-    },
-    getVariants(query) {
-        const url = `/variants/read?productId=${query}`
-        return axiosClient.get(url)
-    },
-    getVariantsById(id) {
-        const url = `/variants/view-by-id?id=${id}`
+    getVariantByFilter(query) {
+        let url = `/variants/read`
+        if(query) {
+            url += `${query}`
+        }
         return axiosClient.get(url)
     },
     createVariants(data) {

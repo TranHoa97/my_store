@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react'
-import { Outlet } from 'react-router-dom';
 import { Layout, theme, Row, Avatar, Col, Button, Space } from 'antd';
 import {
     HomeOutlined,
@@ -10,7 +9,6 @@ import {
 import MenuSider from './menuSider/MenuSider';
 import { useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux';
-import authApi from '../services/AuthApi';
 
 const { Header, Content, Footer, Sider } = Layout;
 
@@ -43,11 +41,15 @@ const LayoutContent = (props) => {
                     color: "#fff",
                     textTransform: "uppercase",
                     fontWeight: "bold",
-                    fontSize: "20px"
+                    fontSize: "25px"
                 }}
                 >
                     {
-                        collapsed ? (<HomeOutlined />) : "admin"
+                        collapsed ? (
+                            <HomeOutlined onClick={() => navigate("/")}/>
+                        ) : (
+                            <div style={{ cursor: "pointer" }} onClick={() => navigate("/")}>admin</div>
+                        )
                     }
                 </div>
                 <MenuSider keyPath={keyPath} />

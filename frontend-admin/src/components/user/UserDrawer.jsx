@@ -16,12 +16,16 @@ const UserDrawer = (props) => {
 
     const [isFetching, setIsFetching] = useState(false)
 
-    const checkSearchParams = (id) => {
+    const checkSearchParams = (groupId) => {
         const params = searchParams.get("group")
-        if(Number(params) === id) {
-            getUsersByFilter(dispatch, location.search)
+        if(+params === groupId) {
+            getUsersByFilter(dispatch, `?page=1&limit=${props.limit}&group=${groupId}`)
         } else {
-            setSearchParams({ group: id })
+            setSearchParams({ 
+                page: 1,
+                limit: props.limit,
+                group: groupId
+            })
         }
     }
 
@@ -34,37 +38,44 @@ const UserDrawer = (props) => {
             return
         }
 
-        setIsFetching(true)
-        if (props.action === "create") {
-            const res = await userApi.createUser(values)
-            if (res.st === 1) {
-                dispatch(openNotification(
-                    { type: "success", message: res.msg, duration: 2, open: true }
-                ))
-                checkSearchParams(values.group_id)
-                setIsFetching(false)
-                props.onClose()
+        try {
+            setIsFetching(true)
+            if (props.action === "create") {
+                const res = await userApi.createUser(values)
+                if (res.st === 1) {
+                    dispatch(openNotification(
+                        { type: "success", message: res.msg, duration: 2, open: true }
+                    ))
+                    setIsFetching(false)
+                    props.onClose()
+                    checkSearchParams(values.group_id)
+                } else {
+                    dispatch(openNotification(
+                        { type: "error", message: res.msg, duration: 2, open: true }
+                    ))
+                    setIsFetching(false)
+                }
             } else {
-                dispatch(openNotification(
-                    { type: "error", message: res.msg, duration: 2, open: true }
-                ))
-                setIsFetching(false)
+                const res = await userApi.updateUser(props.data.id, values)
+                if (res.st === 1) {
+                    dispatch(openNotification(
+                        { type: "success", message: res.msg, duration: 2, open: true }
+                    ))
+                    setIsFetching(false)
+                    props.onClose()
+                    await getUsersByFilter(dispatch, location.search ? location.search : `?page=1&limit=${props.limit}`)
+                } else {
+                    dispatch(openNotification(
+                        { type: "error", message: res.msg, duration: 2, open: true }
+                    ))
+                    setIsFetching(false)
+                }
             }
-        } else {
-            const res = await userApi.updateUser(props.data.id, values)
-            if (res.st === 1) {
-                dispatch(openNotification(
-                    { type: "success", message: res.msg, duration: 2, open: true }
-                ))
-                checkSearchParams(values.group_id)
-                setIsFetching(false)
-                props.onClose()
-            } else {
-                dispatch(openNotification(
-                    { type: "error", message: res.msg, duration: 2, open: true }
-                ))
-                setIsFetching(false)
-            }
+        } catch(err) {
+            dispatch(openNotification(
+                { type: "error", message: "Something wrong!", duration: 2, open: true }
+            ))
+            setIsFetching(false)
         }
     }
 

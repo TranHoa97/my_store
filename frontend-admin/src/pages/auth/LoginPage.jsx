@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button, Checkbox, Form, Input, Row, Col, Space, Layout } from 'antd';
 import { loginUser } from "../../redux/auth/authRequest";
@@ -17,6 +17,13 @@ const LoginPage = () => {
     const onFinishFailed = (errorInfo) => {
         console.log('Failed:', errorInfo);
     };
+
+    useEffect(() => {
+        form.setFieldsValue({
+            username: "admin",
+            password: 123456789
+        })
+    }, [])
 
     return (
         <div 

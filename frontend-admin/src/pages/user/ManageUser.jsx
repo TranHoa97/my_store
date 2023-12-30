@@ -3,11 +3,10 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useSearchParams, useLocation, useNavigate } from 'react-router-dom'
 import { Space, Col, Button, Table, Row, Spin, Select, Input, Modal, Typography } from 'antd'
 import { PlusOutlined, RedoOutlined } from '@ant-design/icons'
-import _ from "lodash"
 import { debounce } from "lodash";
 
 import { getUsersByFilter } from '../../redux/user/userRequest'
-import { getAllGroups } from '../../redux/group/groupRequest'
+import { getGroupByFilter } from '../../redux/group/groupRequest'
 import { openNotification } from '../../redux/slice/notificationSlice'
 import userApi from '../../services/UserApi'
 import UserDrawer from '../../components/user/UserDrawer'
@@ -22,26 +21,32 @@ const ManageUser = () => {
     const navigate = useNavigate()
     let [searchParams, setSearchParams] = useSearchParams();
     const group = searchParams.get("group")
-    const search = searchParams.get("search") 
+    const search = searchParams.get("search")
+    const page = searchParams.get("page")
 
     const isFetching = useSelector(state => state.user.isFetching)
-    const users = useSelector(state => state.user.value)?.map((item,index) => {
+    const users = useSelector(state => state.user.value?.data)?.map((item,index) => {
         return { ...item, key: index + 1 }
     })
-    const groups = useSelector(state => state.group.value)?.map(item => {
+    const groups = useSelector(state => state.group.value?.data)?.map(item => {
         return { value: item.id, label: item.label }
     })
+    const pagination = useSelector(state => state.user.value?.pagination)
     const account = useSelector(state => state.auth.login.value).groupWithRoles.roles
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false)
-    const [action, setAction] = useState(null)
     const [loading, setLoading] = useState(false)
-    const [user, setUser] = useState(false)
+    const [action, setAction] = useState(null)
+    const [user, setUser] = useState(null)
+    const [filter, setFilter] = useState({
+        page: +page || 1,
+        limit: 6,
+    })
 
     const columns = [
         {
-            title: 'Id',
+            title: 'UserId',
             dataIndex: 'id',
             key: 'id',
         },
@@ -78,76 +83,108 @@ const ManageUser = () => {
     ]
 
     const showDrawer = (action, record) => {
-        const checkPermission = account.find(item => item.url === "/user/create" || item.url === "/user/update")
-        if(checkPermission) {
+        const checkPermissionCreate = account.find(item => item.url === "/user/create")
+        const checkPermissionUpdate = account.find(item => item.url === "/user/update")
+        if(checkPermissionCreate) {
+            setIsDrawerOpen(true)
+            setAction(action)
+        } else {
+            navigate(`/error/403`)
+        }
+        if(checkPermissionUpdate) {
             setIsDrawerOpen(true)
             setAction(action)
             setUser(record)
         } else {
             navigate(`/error/403`)
         }
-    }
+    } 
 
     const showModal = (record) => {
-        setIsModalOpen(true);
-        setUser(record)
+        const checkPermissionDelete = account.find(item => item.url === "/user/delete")
+        if(checkPermissionDelete) {
+            setIsModalOpen(true);
+            setUser(record)
+        } else {
+            navigate(`/error/403`)
+        }
     };
 
-    const handleSearch = debounce(async(e) => {
-        let keyword = e.target.value
-        if(group) {
-            setSearchParams({ group: group, search: keyword })
-        } else {
-            setSearchParams({ search: keyword })
+    const handleChange = debounce((type, e) => {
+        // console.log(e);
+        let newFilter = filter
+        switch (type) {
+            case "pagination":
+                setFilter({ ...filter, page: e })
+                newFilter = {...filter, page: e}
+                break;
+            case "group":
+                if(e === "all") {
+                    let {group, ...others} = filter
+                    setFilter({...others, page: 1})
+                    newFilter = {...others, page: 1}
+                } else {
+                    setFilter({ ...filter, page: 1, group: e })
+                    newFilter = { ...filter, page: 1, group: e }
+                }
+                break;
+            case "search":
+                let keyword = e.target.value
+                if(keyword) {
+                    setFilter({ ...filter, page: 1, search: keyword })
+                    newFilter = { ...filter, page: 1, search: keyword }
+                } else {
+                    let {search, ...others} = filter
+                    setFilter({...others, page: 1})
+                    newFilter = {...others, page: 1}
+                }
+                break;
         }
-    }, 1000)
-
-    const handleChange = (e) => {
-        if(e === "all") {
-            if(search) {
-                setSearchParams({ search: search })
-            } else {
-                setSearchParams({})
-            }
-        } else {
-            if(search) {
-                setSearchParams({ group: e, search: search })
-            } else {
-                setSearchParams({ group: e })
-            }
-        }
-    }
-
-    const refreshData = () => {
-        getUsersByFilter(dispatch, location.search)
-    }
-
+        setSearchParams(newFilter)
+    }, 500)
+    
     const handleDelete = async () => {
-        setLoading(true)
-        const res = await userApi.deleteUser(user.id)
-        if (res.st === 1) {
+        try {
+            setLoading(true)
+            const res = await userApi.deleteUser(user.id)
+            if (res.st === 1) {
+                setLoading(false)
+                setIsModalOpen(false)
+                dispatch(openNotification(
+                    { type: "success", message: res.msg, duration: 2, open: true }
+                ))
+                if(user.group_id === +group) {
+                    getUsersByFilter(dispatch, `?page=1&limit=${filter.limit}&group=${user.group_id}`)
+                } else {
+                    setSearchParams({ page: 1, limit: filter.limit, group: user.group_id })
+                }
+            } else {
+                setLoading(false)
+                setIsModalOpen(false)
+                dispatch(openNotification(
+                    { type: "error", message: res.msg, duration: 2, open: true }
+                ))
+            }
+        } catch(err) {
             setLoading(false)
             setIsModalOpen(false)
             dispatch(openNotification(
-                { type: "success", message: res.msg, duration: 2, open: true }
-            ))
-            refreshData()
-        } else {
-            setLoading(false)
-            setIsModalOpen(false)
-            dispatch(openNotification(
-                { type: "error", message: res.msg, duration: 2, open: true }
+                { type: "error", message: "Something wrong!", duration: 2, open: true }
             ))
         }
     }
 
     useEffect(() => {
-        getAllGroups(dispatch)
         dispatch(setMenu(["2"]))
+        getGroupByFilter(dispatch)
     }, [])
 
     useEffect(() => {
-        refreshData()
+        if(location.search) {
+            getUsersByFilter(dispatch, location.search)
+        } else {
+            getUsersByFilter(dispatch, `?page=1&limit=${filter.limit}`)
+        }
     }, [searchParams])
 
     return (
@@ -157,7 +194,7 @@ const ManageUser = () => {
                 <Space size={"middle"}>
                     <Button
                         icon={<RedoOutlined />}
-                        onClick={() => refreshData()}
+                        onClick={() => getUsersByFilter(dispatch, location.search ? location.search : `?page=1&limit=${filter.limit}`)}
                     >
                         Refresh
                     </Button>
@@ -174,17 +211,18 @@ const ManageUser = () => {
                 <Row align={"middle"} gutter={[16, 0]}>
                     <Col>Groups:</Col>
                     <Select
+                        style={{ minWidth: "200px", textTransform: "capitalize" }}
                         placeholder={`Please Select...`}
                         options={groups ? [...groups, { value: "all", label: "all" }] : []}
-                        onChange={handleChange}
-                        value={Number(group) || "all"}
-                        style={{ minWidth: "200px", textTransform: "capitalize" }}
+                        value={group ? +group : "all"}
+                        onChange={(e) => handleChange("group", e)}
                     />
                 </Row>
-                <Col span={10}>
+                <Col span={12}>
                     <Search
                         placeholder="input search username, email, phone..."
-                        onChange={handleSearch}
+                        onChange={(e) => handleChange("search", e)}
+                        defaultValue={search}
                         allowClear
                         enterButton
                     />
@@ -193,8 +231,13 @@ const ManageUser = () => {
             <Table
                 columns={columns}
                 dataSource={users}
-                pagination={{ pageSize: 8 }}
                 loading={isFetching}
+                pagination={{ 
+                    pageSize: filter.limit ? filter.limit : 8,
+                    current: page ? +page : 1,
+                    total: pagination?.total || 1,
+                    onChange: (e) => handleChange("pagination", e)
+                }}
             />
 
             <UserDrawer
@@ -203,15 +246,16 @@ const ManageUser = () => {
                 action={action}
                 groups={groups}
                 data={user}
+                limit={filter.limit}
             />
 
             <Modal
+                style={{ top: 20 }}
                 title={"Delete User"}
                 open={isModalOpen}
                 onOk={handleDelete}
                 onCancel={() => setIsModalOpen(false)}
                 confirmLoading={loading}
-                style={{ top: 20 }}
             >
                 <p>Do you want to delete user ?</p>
             </Modal>

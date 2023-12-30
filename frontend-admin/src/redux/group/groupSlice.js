@@ -19,10 +19,9 @@ export const groupSlice = createSlice({
             state.error = false
             state.value = action.payload
         },
-        getGroupFailed: (state, action) => {
+        getGroupFailed: (state) => {
             state.isFetching = false
             state.error = true
-            state.value = action.payload
         },
     },
 })

@@ -13,6 +13,7 @@ import banner3 from "../../assets/banner-home/banner3.webp"
 import banner4 from "../../assets/banner-home/banner4.webp"
 
 import productApi from '../../services/productApi'
+import ProductCard from '../../components/partials/ProductCard/ProductCard'
 
 const HomePage = () => {
 
@@ -21,10 +22,11 @@ const HomePage = () => {
   const [smartphone, setSmartphone] = useState(null)
   const [laptop, setLaptop] = useState(null)
   const [tablet, setTablet] = useState(null)
+  const [accessories, setAccessories] = useState(null)
 
   const fetchData = async (category, limit) => {
     const res = await productApi.getProductsHome(category, limit)
-    if(res.st === 1) {
+    if (res.st === 1) {
       switch (category) {
         case "dien-thoai":
           setSmartphone(res.data)
@@ -35,18 +37,20 @@ const HomePage = () => {
         case "may-tinh-bang":
           setTablet(res.data)
           break;
-        // case "linh-phu-kien":
-        //   setAccessories(res.data)
-        //   break;
+        case "linh-phu-kien":
+          setAccessories(res.data)
+          break;
       }
     }
   }
 
   useEffect(() => {
-    fetchData("dien-thoai", 4)
-    // fetchData("may-tinh-xach-tay", 4)
-    // fetchData("may-tinh-bang", 4)
-  }, [])
+    if (categories) {
+      for (let index = 0; index < categories.length; index++) {
+        fetchData(categories[index].slug, 4)
+      }
+    }
+  }, [categories])
 
   return (
     <>
@@ -57,11 +61,12 @@ const HomePage = () => {
             <div className="home__slider">
               <div className="home__slider__left">
                 <SlickCarousel
-                  slide={bannerSlide}
+                  data={bannerSlide}
                   dots={true}
-                  mainSlideArrow={true}
-                  subSlideArrow={false}
+                  arrow={true}
                   asNavFor={false}
+                  show={1}
+                  responsive={1}
                 />
               </div>
               <div className="home__slider__right">
@@ -86,9 +91,9 @@ const HomePage = () => {
               {
                 categories?.map(item => (
                   <div className="home__category__item" key={item.id}>
-                    <Link to={`/collections/${item.slug}`} onClick={() => window.scrollTo(0,0)}>
+                    <Link to={`/collections/${item.slug}`} onClick={() => window.scrollTo(0, 0)}>
                       <div className="home__category__item__image">
-                        <img src={item.image} alt="" />
+                        <img src={item.image_url} alt={item.image_name} />
                       </div>
                       <div className="home__category__item__title">{item.label}</div>
                     </Link>
@@ -132,22 +137,19 @@ const HomePage = () => {
       <section className='home'>
         <div className="wrapper">
           <div className="home__box">
-            <div className="home__products">
-              <div className="home__products__title">
-                điện thoại nổi bật
+            <div className="home__product">
+              <div className="home__product__title">
+                <p>điện thoại nổi bật</p>
+                <Link to={`/collections/dien-thoai`}>Xem thêm</Link>
               </div>
-              <div className="home__products__content">
-                { smartphone ? (
-                  <SlickCarousel
-                    product={smartphone}
-                    dots={false}
-                    mainSlideArrow={true}
-                    subSlideArrow={false}
-                    asNavFor={false}
-                    mainShow={4}
-                    responsive={2}
-                  />
-                ) : (<></>) }
+              <div className="home__product__content">
+                {
+                  smartphone && smartphone.map(item => (
+                    <div key={item.id} className='home__product__content__item'>
+                      <ProductCard data={item} />
+                    </div>
+                  ))
+                }
               </div>
             </div>
           </div>
@@ -165,22 +167,19 @@ const HomePage = () => {
       <section className='home'>
         <div className="wrapper">
           <div className="home__box">
-            <div className="home__products">
-              <div className="home__products__title">
-                Laptop bán chạy
+            <div className="home__product">
+              <div className="home__product__title">
+                <p>Laptop nổi bật</p>
+                <Link to={`/collections/may-tinh-xach-tay`}>Xem thêm</Link>
               </div>
-              <div className="home__products__content">
-                { laptop ? (
-                  <SlickCarousel
-                    product={laptop}
-                    dots={false}
-                    mainSlideArrow={true}
-                    subSlideArrow={false}
-                    asNavFor={false}
-                    mainShow={4}
-                    responsive={2}
-                  />
-                ) : (<></>) }
+              <div className="home__product__content">
+                {
+                  laptop && laptop.map(item => (
+                    <div key={item.id} className='home__product__content__item'>
+                      <ProductCard data={item} />
+                    </div>
+                  ))
+                }
               </div>
             </div>
           </div>
@@ -198,22 +197,49 @@ const HomePage = () => {
       <section className='home'>
         <div className="wrapper">
           <div className="home__box">
-            <div className="home__products">
-              <div className="home__products__title">
-                Tablet bán chạy
+            <div className="home__product">
+              <div className="home__product__title">
+                <p>Tablet nổi bật</p>
+                <Link to={`/collections/may-tinh-bang`}>Xem thêm</Link>
               </div>
-              <div className="home__products__content">
-                { tablet ? (
-                  <SlickCarousel
-                    product={tablet}
-                    dots={false}
-                    mainSlideArrow={true}
-                    subSlideArrow={false}
-                    asNavFor={false}
-                    mainShow={4}
-                    responsive={2}
-                  />
-                ) : (<></>) }
+              <div className="home__product__content">
+                {
+                  tablet && tablet.map(item => (
+                    <div key={item.id} className='home__product__content__item'>
+                      <ProductCard data={item} />
+                    </div>
+                  ))
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Banner */}
+      <section className='home'>
+        <div className="wrapper">
+          <img src={banner4} alt="" />
+        </div>
+      </section>
+
+      {/* Accessories */}
+      <section className='home'>
+        <div className="wrapper">
+          <div className="home__box">
+            <div className="home__product">
+              <div className="home__product__title">
+                <p>Phụ kiện nổi bật</p>
+                <Link to={`/collections/linh-phu-kien`}>Xem thêm</Link>
+              </div>
+              <div className="home__product__content">
+                {
+                  accessories && accessories.map(item => (
+                    <div key={item.id} className='home__product__content__item'>
+                      <ProductCard data={item} />
+                    </div>
+                  ))
+                }
               </div>
             </div>
           </div>

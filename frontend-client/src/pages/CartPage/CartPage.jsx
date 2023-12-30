@@ -22,6 +22,7 @@ const CartPage = () => {
 
   useEffect(() => {
     setOrderStatus(null)
+    window.scrollTo(0,0)
   }, [])
 
   return (

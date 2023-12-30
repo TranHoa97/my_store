@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { Space, Row, Button, Form, Input, Upload, Select, Typography, Col } from 'antd'
 import { UploadOutlined } from '@ant-design/icons'
 
-import { getAllCategories } from '../../redux/category/categoryRequest'
+import { getCategoryByFilter } from '../../redux/category/categoryRequest'
 import productApi from '../../services/ProductApi'
 import { openNotification } from '../../redux/slice/notificationSlice'
 import { getBrandsByFilter } from '../../redux/brand/brandRequest'
@@ -17,13 +17,14 @@ const AddProduct = () => {
     const [form] = Form.useForm()
     const navigate = useNavigate()
 
-    const categories = useSelector(state => state.category.value)?.map(item => {
+    const categories = useSelector(state => state.category.value?.data)?.map(item => {
         return { value: item.id, label: item.label }
     })
-    const brands = useSelector(state => state.brand.value)?.map((item) => {
+    const brands = useSelector(state => state.brand.value?.data)?.map((item) => {
         return { value: item.id, label: item.label, category_id: item.category_id }
     })
-    const attributes = useSelector(state => state.attributes.attributes.value)
+    const attributes = useSelector(state => state.attributes.attributes.value?.data)
+    const pagination = useSelector(state => state.product.value?.pagination)
 
     const [fileList, setFileList] = useState([])
     const [multiFileList, setMultiFileList] = useState([])
@@ -90,30 +91,37 @@ const AddProduct = () => {
             formData.append("images", item.originFileObj)
         })
 
-        setIsFetching(true)
-        const res = await productApi.createProduct(formData)
-        if (res.st === 1) {
+        try {
+            setIsFetching(true)
+            const res = await productApi.createProduct(formData)
+            if (res.st === 1) {
+                dispatch(openNotification(
+                    { type: "success", message: res.msg, duration: 2, open: true }
+                ))
+                setIsFetching(false)
+                navigate(`/products?page=1&limit=4&category=${values.category_id}`)
+            } else {
+                dispatch(openNotification(
+                    { type: "error", message: res.msg, duration: 2, open: true }
+                ))
+                setIsFetching(false)
+            }
+        } catch (err) {
             dispatch(openNotification(
-                { type: "success", message: res.msg, duration: 2, open: true }
-            ))
-            navigate(`/products?categoryId=${values.category_id}`)
-            setIsFetching(false)
-        } else {
-            dispatch(openNotification(
-                { type: "error", message: res.msg, duration: 2, open: true }
+                { type: "error", message: "Something wrong!", duration: 2, open: true }
             ))
             setIsFetching(false)
         }
     }
 
-    const handleChange = async (e) => {
+    const handleChange = (e) => {
         setProductBrand(brands.filter(item => item.category_id === e))
         setProductAttributes(attributes.filter(item => item.category_id === e))
     }
 
     useEffect(() => {
         dispatch(setMenu(["9", "sub3"]))
-        getAllCategories(dispatch)
+        getCategoryByFilter(dispatch)
         getAttributesByFilter(dispatch)
         getBrandsByFilter(dispatch)
     }, [])
@@ -195,7 +203,7 @@ const AddProduct = () => {
                         rules={[
                             {
                                 required: true,
-                                message: 'Please input your name!',
+                                message: 'Please input your value!',
                             },
                         ]}
                     >
@@ -215,7 +223,7 @@ const AddProduct = () => {
                             rules={[
                                 {
                                     required: true,
-                                    message: 'Please input your brand!',
+                                    message: 'Please input your value!',
                                 },
                             ]}
                         >
@@ -236,19 +244,14 @@ const AddProduct = () => {
                                         key={index}
                                         label={item.label}
                                         name={item.label}
-                                        rules={[
-                                            {
-                                                required: true,
-                                                message: 'Please input your brand!',
-                                            },
-                                        ]}
+                                        style={{ textTransform: "capitalize" }}
                                     >
                                         <Select
                                             placeholder="Please Select..."
                                             mode='multiple'
                                             allowClear
-                                            options={item.data.map(item => {
-                                                return { label: item.label, value: item.id }
+                                            options={item.data?.map(item => {
+                                                return { label: item.label, value: item.id ? item.id : "" }
                                             })}
                                             style={{ textTransform: "capitalize" }}
                                         />

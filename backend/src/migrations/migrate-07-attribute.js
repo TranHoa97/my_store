@@ -12,6 +12,9 @@ module.exports = {
             label: {
                 type: Sequelize.STRING
             },
+            slug: {
+                type: Sequelize.STRING
+            },
             category_id: {
                 type: Sequelize.INTEGER,
                 references: {

@@ -17,37 +17,44 @@ const AttributesValueDrawer = (props) => {
 
     const handlePostData = async (values) => {
         // console.log(values);
-        setIsFetching(true)
-        if (props.action === "create") {
-            const res = await attributesApi.createAttributesValue({ ...values, attributes_id: params.slug })
-            if (res.st === 1) {
-                dispatch(openNotification(
-                    { type: "success", message: res.msg, duration: 2, open: true }
-                ))
-                props.onClose()
-                setIsFetching(false)
-                await getAttributesValue(dispatch, params.slug)
+        try {
+            setIsFetching(true)
+            if (props.action === "create") {
+                const res = await attributesApi.createAttributesValue({ ...values, attributes_id: params.slug })
+                if (res.st === 1) {
+                    dispatch(openNotification(
+                        { type: "success", message: res.msg, duration: 2, open: true }
+                    ))
+                    props.onClose()
+                    setIsFetching(false)
+                    await getAttributesValue(dispatch, params.slug)
+                } else {
+                    setIsFetching(false)
+                    dispatch(openNotification(
+                        { type: "error", message: res.msg, duration: 2, open: true }
+                    ))
+                }
             } else {
-                setIsFetching(false)
-                dispatch(openNotification(
-                    { type: "error", message: res.msg, duration: 2, open: true }
-                ))
+                const res = await attributesApi.updateAttributesValue(props.data.id, values)
+                if (res.st === 1) {
+                    dispatch(openNotification(
+                        { type: "success", message: res.msg, duration: 2, open: true }
+                    ))
+                    props.onClose()
+                    setIsFetching(false)
+                    await getAttributesValue(dispatch, params.slug)
+                } else {
+                    setIsFetching(false)
+                    dispatch(openNotification(
+                        { type: "error", message: res.msg, duration: 2, open: true }
+                    ))
+                }
             }
-        } else {
-            const res = await attributesApi.updateAttributesValue(props.data.id, values)
-            if (res.st === 1) {
-                dispatch(openNotification(
-                    { type: "success", message: res.msg, duration: 2, open: true }
-                ))
-                props.onClose()
-                setIsFetching(false)
-                await getAttributesValue(dispatch, params.slug)
-            } else {
-                setIsFetching(false)
-                dispatch(openNotification(
-                    { type: "error", message: res.msg, duration: 2, open: true }
-                ))
-            }
+        } catch(err) {
+            setIsFetching(false)
+            dispatch(openNotification(
+                { type: "error", message: "Something wrong!", duration: 2, open: true }
+            ))
         }
     }
 
@@ -56,9 +63,10 @@ const AttributesValueDrawer = (props) => {
             form.resetFields()
         } else {
             if (props.data) {
+                const { label, slug } = props.data
                 form.setFieldsValue({
-                    title: props.data.label,
-                    slug: props.data.slug
+                    title: label,
+                    slug: slug
                 })
             }
         }
@@ -108,7 +116,7 @@ const AttributesValueDrawer = (props) => {
 
                 {/* slug */}
                 <Form.Item
-                    label="Slug:"
+                    label="SKU:"
                     name="slug"
                     rules={[
                         {

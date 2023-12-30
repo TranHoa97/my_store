@@ -5,12 +5,10 @@ const attributesController = {
     // Attributes
     getAttributes: async (req, res) => {
         try {
-            const { category, search } = req.query
+            const { category, search, page, limit } = req.query
 
             let sql = `select 
-            attribute.id,
-            attribute.label,
-            attribute.category_id,
+            attribute.*,
             category.label as category_label,
             JSON_ARRAYAGG(
                 JSON_OBJECT(
@@ -21,27 +19,52 @@ const attributesController = {
             ) as data
             from attribute
             left join category on attribute.category_id = category.id
-            left join attribute_value on attribute.id = attribute_value.attribute_id
+            left join attribute_value on attribute_value.attribute_id = attribute.id
             where attribute.id is not null`
+
+            let sqlTotal = `select count(*) as count from attribute where id is not null`
 
             if(category) {
                 sql += ` and attribute.category_id = ${category}`
+                sqlTotal += ` and attribute.category_id = ${category}`
             }
 
             if(search) {
-                const newSearch = search.toLowerCase().replaceAll("-", " ")
-                sql += ` and attribute.label like "%${newSearch}%"`
+                sql += ` and (attribute.label like "%${search}%"
+                or attribute.id like "%${search}%"
+                or attribute.slug like "%${search}%")`
+
+                sqlTotal += ` and (attribute.label like "%${search}%"
+                or attribute.id like "%${search}%"
+                or attribute.slug like "%${search}%")`
             }
 
-            sql += ` group by attribute.id 
-                    order by attribute.category_id asc`
+            sql += ` group by attribute.id order by attribute.category_id asc`
+
+            if(limit) {
+                sql += ` limit ${limit}`
+            }
+
+            if(page) {
+                const offset = (page - 1) * limit
+                sql += ` offset ${offset}`
+            }
 
             const [attributes] = await db.execute(sql)
+
+            const [totalAttribute] = await db.execute(sqlTotal)
 
             return res.status(200).json({
                 st: 1,
                 msg: "Get attributes successfully!",
-                data: attributes.length > 0 ? attributes : []
+                data: {
+                    data: attributes.length > 0 ? attributes : [],
+                    pagination: {
+                        page: +page,
+                        limit: +limit,
+                        total: +(totalAttribute[0]?.count),
+                    }
+                }
             })
 
         } catch (err) {
@@ -54,18 +77,20 @@ const attributesController = {
 
     createAttributes: async (req, res) => {
         try {
-            const { title, category_id } = req.body
+            const { title, category_id, slug } = req.body
 
-            if(!title || !category_id) {
+            // validation
+            if(!title || !category_id || !slug) {
                 return res.status(200).json({
                     st: 0,
                     msg: "Missing params!"
                 })
             }
 
+            // insert
             await db.execute(
-                `insert into attribute (label, category_id) values (?,?)`, 
-                [title, category_id]
+                `insert into attribute (label, category_id, slug) values (?,?,?)`, 
+                [title, category_id, slug]
             )
 
             return res.status(200).json({
@@ -84,19 +109,20 @@ const attributesController = {
     updateAttributes: async (req, res) => {
         try {
             const { id } = req.query
-            const { title, category_id } = req.body
+            const { title, category_id, slug } = req.body
 
-            // Validation
-            if(!id || !title || !category_id) {
+            // validation
+            if(!id || !title || !category_id || !slug) {
                 return res.status(200).json({
                     st: 0,
                     msg: "Missing params!"
                 })
             }
 
+            // update
             await db.execute(
-                `update attribute set label = ?, category_id = ? where id = ?`, 
-                [title, category_id, id]
+                `update attribute set label = ?, category_id = ?, slug = ? where id = ?`, 
+                [title, category_id, slug, id]
             )
 
             return res.status(200).json({
@@ -116,7 +142,7 @@ const attributesController = {
         try {
             const { id } = req.query
 
-            // Validation
+            // validation
             if(!id) {
                 return res.status(404).json({
                     st: 0,
@@ -124,6 +150,7 @@ const attributesController = {
                 })
             }
 
+            // delete
             await db.execute(
                 `delete from attribute where id = ?`, 
                 [id]
@@ -186,7 +213,7 @@ const attributesController = {
         try {
             const { attributes_id, title, slug } = req.body
 
-            // Validation
+            // validation
             if(!attributes_id || !title || !slug) {
                 return res.status(200).json({
                     st: 0,
@@ -194,6 +221,7 @@ const attributesController = {
                 })
             }
             
+            // insert
             await db.execute(
                 `insert into attribute_value (attribute_id, label, slug) 
                 values (?,?,?)`, 
@@ -218,7 +246,7 @@ const attributesController = {
             const { id } = req.query
             const { title, slug } = req.body
 
-            // Validation
+            // validation
             if(!id || !title || !slug) {
                 return res.status(200).json({
                     st: 0,
@@ -226,6 +254,7 @@ const attributesController = {
                 })
             }
 
+            // update
             await db.execute(
                 `update attribute_value set label = ?, slug = ? where id = ?`, 
                 [title, slug, id]
@@ -248,7 +277,7 @@ const attributesController = {
         try {
             const { id } = req.query
 
-            // Validation
+            // validation
             if(!id) {
                 return res.status(404).json({
                     st: 0,
@@ -256,6 +285,7 @@ const attributesController = {
                 })
             }
 
+            // delete
             await db.execute(
                 `delete from attribute_value where id = ?`, 
                 [id]

@@ -125,7 +125,7 @@ const storeController = {
 
     getProductsCollectionPage: async (req, res) => {
         try {
-            const { category, limit, sort, brand, ...filter } = req.query
+            const { category, limit, sort, brand, page, ...filter } = req.query
 
             let sql = `select 
             product.*,
@@ -141,11 +141,23 @@ const storeController = {
             left join attribute_value on product_attribute.value_id = attribute_value.id
             where category.slug = ?`
 
+            let sqlTotal = `select 
+            sum(distinct variant.sold) as total_sold, 
+            min(variant.price) as min_price
+            from product
+            left join category on product.category_id = category.id
+            left join brand on product.brand_id = brand.id
+            left join variant on product.id = variant.product_id
+            left join product_attribute on product.id = product_attribute.product_id
+            left join attribute_value on product_attribute.value_id = attribute_value.id
+            where category.slug = ?`
+
             // Brand
             if (brand) {
                 let arr = []
                 const newArr = arr.concat(brand).join("','")
                 sql += ` and brand.slug IN('${newArr}')`
+                sqlTotal += ` and brand.slug IN('${newArr}')`
             }
             
             // Filter
@@ -164,30 +176,42 @@ const storeController = {
             if(arr.length > 0) {
                 let newArr = arr.join("','")
                 sql += ` and attribute_value.slug IN('${newArr}')`
+                sqlTotal += ` and attribute_value.slug IN('${newArr}')`
             }
             
             // Sort
             if (sort) {
                 sql += ` group by product.id`
+                sqlTotal += ` group by product.id`
                 switch (sort) {
                     case "ban-chay-nhat":
                         sql += ` order by total_sold desc`
+                        sqlTotal += ` order by total_sold desc`
                         break;
                     case "gia-thap-den-cao":
-                        sql += ` order by min_price desc`
+                        sql += ` order by min_price asc`
+                        sqlTotal += ` order by min_price asc`
                         break;
                     case "gia-cao-den-thap":
-                        sql += ` order by min_price asc`
+                        sql += ` order by min_price desc`
+                        sqlTotal += ` order by min_price desc`
                         break;
                 }
             }
 
             // Limit
             if (limit) {
-                sql += ` limit ${Number(limit) + 20}`
+                sql += ` limit ${limit}`
+            }
+
+            if(page) {
+                const offset = (page - 1) * limit
+                sql += ` offset ${offset}`
             }
 
             const [products] = await db.execute(sql, [category])
+
+            const [totalProduct] = await db.execute(sqlTotal, [category])
 
             let results = []
             for (let index = 0; index < products.length; index++) {
@@ -205,7 +229,14 @@ const storeController = {
                 st: 1,
                 msg: "Get product successfully!",
                 data: results,
-                filter: { ...obj, sort: sort, brand: typeof brand === "string" ? [brand] : brand }
+                filter: { 
+                    ...obj, 
+                    sort: sort,
+                    brand: typeof brand === "string" ? [brand] : brand ,
+                    limit: +limit,
+                    page: +page,
+                    total_page: Math.ceil(totalProduct.length / +limit)
+                },
             })
 
 
@@ -222,7 +253,12 @@ const storeController = {
             const { slug } = req.query
 
             const [product] = await db.execute(
-                `select * from product where slug = ?`,
+                `select 
+                product.*,
+                brand.label as brand_label
+                from product 
+                left join brand on product.brand_id = brand.id
+                where product.slug = ?`,
                 [slug]
             )
             const [images] = await db.execute(
@@ -252,6 +288,7 @@ const storeController = {
                 data: { ...product[0], variants: newVariants, images: images }
             })
         } catch (err) {
+            console.log(err);
             return res.status(500).json({
                 st: 0,
                 msg: err.message

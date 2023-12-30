@@ -61,7 +61,7 @@ const HeaderComponent = () => {
                                 categories?.map((item, index) => (
                                     <div className="header__nav__item" key={index}>
                                         <Link to={`/collections/${item.slug}`}>
-                                            <img src={item.icon} alt="" />
+                                            <img src={item.icon_url} alt={item.icon_name} />
                                             <span>{item.label}</span>
                                         </Link>
                                     </div>

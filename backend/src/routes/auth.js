@@ -1,6 +1,6 @@
 import express from "express"
 import authController from "../controller/authController"
-import auth from "../middleware/auth"
+import { checkUserJwt } from "../middleware/auth"
 
 const router = express.Router()
 
@@ -15,10 +15,10 @@ const authRoute = (app) => {
     router.post("/logout", authController.handleLogout)
 
     // UPDATE ACCOUNT
-    router.post("/update", auth.checkUserJwt, authController.updateAccount)
+    router.post("/update", checkUserJwt, authController.updateAccount)
     
     // GET ACCOUNT
-    router.get("/account", auth.checkUserJwt, authController.getUpdateAccount)
+    router.get("/account", checkUserJwt, authController.getUpdateAccount)
 
     return app.use("/auth", router)
 }

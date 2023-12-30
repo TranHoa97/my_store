@@ -11,7 +11,7 @@ import {
 } from 'redux-persist'
 import storage from 'redux-persist/lib/storage'
 
-import menuSliderReducer from "./slice/menuSiderSlice"
+import menuSiderReducer from "./slice/menuSiderSlice"
 import notificationReducer from "./slice/notificationSlice"
 
 import authReducer from "./auth/authSlice"
@@ -30,13 +30,14 @@ const persistConfig = {
     key: 'root',
     version: 1,
     storage,
+    blacklist: ['brand', 'category', 'user', 'group', 'attributes', 'product', 'variants', 'order', 'roles', 'image']
 }
 
 const rootReducer = combineReducers({
     brand: brandReducer,
     category: categoryReducer,
     auth: authReducer,
-    menu: menuSliderReducer,
+    menu: menuSiderReducer,
     user: userReducer,
     group: groupReducer,
     attributes: attributesReducer,

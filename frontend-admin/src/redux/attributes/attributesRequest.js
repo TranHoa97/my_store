@@ -11,13 +11,20 @@ import { openNotification } from "../slice/notificationSlice";
 
 export const getAttributesByFilter = async(dispatch, query) => {
     dispatch(getAttributesStart())
-    const res = await attributesApi.getAttributesByFilter(query)
-    if(res.st === 1) {
-        dispatch(getAttributesSuccess(res.data))
-    } else {
+    try {
+        const res = await attributesApi.getAttributesByFilter(query)
+        if(res.st === 1) {
+            dispatch(getAttributesSuccess(res.data))
+        } else {
+            dispatch(getAttributesFailed())
+            dispatch(openNotification(
+                { type:"error", message:res.msg, duration:2, open:true }
+            ))
+        }
+    } catch(err) {
         dispatch(getAttributesFailed())
         dispatch(openNotification(
-            { type:"error", message:res.msg, duration:2, open:true }
+            { type:"error", message:"Something wrong!", duration:2, open:true }
         ))
     }
 }
@@ -26,13 +33,20 @@ export const getAttributesByFilter = async(dispatch, query) => {
 
 export const getAttributesValue = async(dispatch, attributesId) => {
     dispatch(getAttributesValueStart())
-    const res = await attributesApi.getAttributesValue(attributesId)
-    if(res.st === 1) {
-        dispatch(getAttributesValueSuccess(res.data))
-    } else {
-        dispatch(getAttributesValueFailed())
+    try {
+        const res = await attributesApi.getAttributesValue(attributesId)
+        if(res.st === 1) {
+            dispatch(getAttributesValueSuccess(res.data))
+        } else {
+            dispatch(getAttributesValueFailed())
+            dispatch(openNotification(
+                { type:"error", message:res.msg, duration:2, open:true }
+            ))
+        }
+    } catch(err) {
+        dispatch(getAttributesFailed())
         dispatch(openNotification(
-            { type:"error", message:res.msg, duration:2, open:true }
+            { type:"error", message:"Something wrong!", duration:2, open:true }
         ))
     }
 }

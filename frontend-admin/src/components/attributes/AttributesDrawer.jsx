@@ -16,48 +16,59 @@ const AttributesDrawer = (props) => {
 
     const [isFetching, setIsFetching] = useState(false)
 
-    const checkSearchParams = (categoryId) => {
-        const params = searchParams.get("categoryId")
-        if (Number(params) === categoryId) {
-            getAttributesByFilter(dispatch, location.search)
+    const checkParams = (categoryId) => {
+        const params = searchParams.get("category")
+        if (+params === categoryId) {
+            getAttributesByFilter(dispatch, `?page=1&limit=${props.limit}&category=${categoryId}`)
         } else {
-            setSearchParams({ categoryId: categoryId })
+            setSearchParams({
+                page: 1,
+                limit: props.limit,
+                category: categoryId
+            })
         }
     }
 
     const handlePostData = async (values) => {
         // console.log(values);
-        setIsFetching(true)
-        if (props.action === "create") {
-            const res = await attributesApi.createAttributes(values)
-            if (res.st === 1) {
-                dispatch(openNotification(
-                    { type: "success", message: res.msg, duration: 2, open: true }
-                ))
-                checkSearchParams(values.category_id)
-                setIsFetching(false)
-                props.onClose()
+        try {
+            setIsFetching(true)
+            if (props.action === "create") {
+                const res = await attributesApi.createAttributes(values)
+                if (res.st === 1) {
+                    dispatch(openNotification(
+                        { type: "success", message: res.msg, duration: 2, open: true }
+                    ))
+                    setIsFetching(false)
+                    props.onClose()
+                    checkParams(values.category_id)
+                } else {
+                    dispatch(openNotification(
+                        { type: "error", message: res.msg, duration: 2, open: true }
+                    ))
+                    setIsFetching(false)
+                }
             } else {
-                dispatch(openNotification(
-                    { type: "error", message: res.msg, duration: 2, open: true }
-                ))
-                setIsFetching(false)
+                const res = await attributesApi.updateAttributes(props.data.id, values)
+                if (res.st === 1) {
+                    dispatch(openNotification(
+                        { type: "success", message: res.msg, duration: 2, open: true }
+                    ))
+                    setIsFetching(false)
+                    props.onClose()
+                    await getAttributesByFilter(dispatch, location.search ? location.search : `?page=1&limit=${props.limit}`)
+                } else {
+                    dispatch(openNotification(
+                        { type: "error", message: res.msg, duration: 2, open: true }
+                    ))
+                    setIsFetching(false)
+                }
             }
-        } else {
-            const res = await attributesApi.updateAttributes(props.data.id, values)
-            if (res.st === 1) {
-                dispatch(openNotification(
-                    { type: "success", message: res.msg, duration: 2, open: true }
-                ))
-                checkSearchParams(values.category_id)
-                setIsFetching(false)
-                props.onClose()
-            } else {
-                dispatch(openNotification(
-                    { type: "error", message: res.msg, duration: 2, open: true }
-                ))
-                setIsFetching(false)
-            }
+        } catch(err) {
+            dispatch(openNotification(
+                { type: "error", message: "Something wrong!", duration: 2, open: true }
+            ))
+            setIsFetching(false)
         }
     }
 
@@ -66,9 +77,11 @@ const AttributesDrawer = (props) => {
             form.resetFields()
         } else {
             if (props.data) {
+                const { label, category_id, slug} = props.data
                 form.setFieldsValue({
-                    title: props.data.label,
-                    category_id: props.data.category_id
+                    title: label,
+                    category_id: category_id,
+                    slug: slug
                 })
             }
         }
@@ -114,6 +127,20 @@ const AttributesDrawer = (props) => {
                     ]}
                 >
                     <Input placeholder="label..." />
+                </Form.Item>
+
+                {/* slug */}
+                <Form.Item
+                    label="SKU:"
+                    name="slug"
+                    rules={[
+                        {
+                            required: true,
+                            message: 'Please input your value!',
+                        },
+                    ]}
+                >
+                    <Input placeholder="slug..." />
                 </Form.Item>
 
                 {/* category */}

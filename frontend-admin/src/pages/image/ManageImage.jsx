@@ -3,7 +3,6 @@ import { useDispatch, useSelector } from 'react-redux'
 import { Space, Button, Table, Row, Modal, Typography, Col, Input } from 'antd'
 import { PlusOutlined, RedoOutlined } from '@ant-design/icons'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import _ from "lodash"
 import { debounce } from "lodash";
 
 import { getImagesByFilter } from '../../redux/image/imageRequest'
@@ -16,13 +15,16 @@ const ManageImage = () => {
 
   const dispatch = useDispatch()
   const navigate = useNavigate()
-  let [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation()
+  let [searchParams, setSearchParams] = useSearchParams();
+  const page = searchParams.get("page")
+  const search = searchParams.get("search")
 
   const loading = useSelector(state => state.image.isFetching)
-  const images = useSelector(state => state.image.value)?.map((item, index) => {
+  const images = useSelector(state => state.image.value?.data)?.map((item, index) => {
     return { ...item, key: index + 1 }
   })
+  const pagination = useSelector(state => state.image.value?.pagination)
   const account = useSelector(state => state.auth.login.value).groupWithRoles.roles
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
@@ -30,10 +32,14 @@ const ManageImage = () => {
   const [action, setAction] = useState(null)
   const [isFetching, setIsFetching] = useState(null)
   const [updateData, setUpdateData] = useState(null)
+  const [filter, setFilter] = useState({
+    page: page ? +page : 1,
+    limit: 4
+  })
 
   const columns = [
     {
-      title: 'Product Id',
+      title: 'ProId',
       dataIndex: 'product_id',
       key: 'product_id',
     },
@@ -47,7 +53,7 @@ const ManageImage = () => {
       title: 'Image',
       dataIndex: 'url',
       key: 'url',
-      render: (thumb) => <div><img style={{ width: "120px" }} src={thumb ? thumb : ""} /></div>
+      render: (thumb) => <div><img style={{ width: "60px" }} src={thumb ? thumb : ""} /></div>
     },
     {
       title: 'Action',
@@ -62,8 +68,15 @@ const ManageImage = () => {
   ]
 
   const showDrawer = (action, record) => {
-    const checkPermission = account.find(item => item.url === "/images/create" || item.url === "/images/update")
-    if (checkPermission) {
+    const checkPermissionCreate = account.find(item => item.url === "/images/create")
+    const checkPermissionUpdate = account.find(item => item.url === "/images/update")
+    if (checkPermissionCreate) {
+      setIsDrawerOpen(true)
+      setAction(action)
+    } else {
+      navigate(`/error/403`)
+    }
+    if (checkPermissionUpdate) {
       setIsDrawerOpen(true)
       setAction(action)
       setUpdateData(record)
@@ -73,44 +86,78 @@ const ManageImage = () => {
   }
 
   const showModal = (record) => {
-    setIsModalOpen(true)
-    setUpdateData(record)
-  }
-
-  const handleDelete = async () => {
-    setIsFetching(true)
-    const res = await imageApi.deleteImage(updateData.id, updateData.title)
-    if (res.st === 1) {
-      setIsFetching(false)
-      setIsModalOpen(false)
-      dispatch(openNotification(
-        { type: "success", message: res.msg, duration: 2, open: true }
-      ))
-      await getImagesByFilter(dispatch)
+    const checkPermissionDelete = account.find(item => item.url === "/images/delete")
+    if (checkPermissionDelete) {
+      setIsModalOpen(true);
+      setUpdateData(record)
     } else {
-      setIsFetching(false)
-      setIsModalOpen(false)
-      dispatch(openNotification(
-        { type: "error", message: res.msg, duration: 2, open: true }
-      ))
+      navigate(`/error/403`)
     }
   }
 
-  const handleSearch = debounce((e) => {
-    let keyword = e.target.value.toLowerCase().replaceAll(" ", "-")
-    setSearchParams({ search: keyword })
-  }, 1000)
+  const handleChange = debounce((type, e) => {
+    // console.log(e);
+    let newFilter = filter
+    switch (type) {
+      case "pagination":
+        setFilter({ ...filter, page: e })
+        newFilter = { ...filter, page: e }
+        break;
+      case "search":
+        let keyword = e.target.value
+        if (keyword) {
+          setFilter({ ...filter, page: 1, search: keyword })
+          newFilter = { ...filter, page: 1, search: keyword }
+        } else {
+          let { search, ...others } = filter
+          setFilter({ ...others, page: 1 })
+          newFilter = { ...others, page: 1 }
+        }
+        break;
+    }
+    setSearchParams(newFilter)
+  }, 500)
+
+  const handleDelete = async () => {
+    try {
+      setIsFetching(true)
+      const res = await imageApi.deleteImage(updateData.id, updateData.title)
+      if (res.st === 1) {
+        setIsFetching(false)
+        setIsModalOpen(false)
+        dispatch(openNotification(
+          { type: "success", message: res.msg, duration: 2, open: true }
+        ))
+        if (+page === 1) {
+          getImagesByFilter(dispatch, `?page=1&limit=${filter.limit}`)
+        } else {
+          setSearchParams({ page: 1, limit: filter.limit })
+        }
+      } else {
+        setIsFetching(false)
+        setIsModalOpen(false)
+        dispatch(openNotification(
+          { type: "error", message: res.msg, duration: 2, open: true }
+        ))
+      }
+    } catch (err) {
+      setIsFetching(false)
+      setIsModalOpen(false)
+      dispatch(openNotification(
+        { type: "error", message: "Something wrong!", duration: 2, open: true }
+      ))
+    }
+  }
 
   useEffect(() => {
     dispatch(setMenu(["13"]))
   }, [])
 
   useEffect(() => {
-    const checkPermission = account.find(item => item.url === "/images/read")
-    if (checkPermission) {
+    if (location.search) {
       getImagesByFilter(dispatch, location.search)
     } else {
-      navigate(`/error/403`)
+      getImagesByFilter(dispatch, `?page=1&limit=${filter.limit}`)
     }
   }, [searchParams])
 
@@ -121,7 +168,7 @@ const ManageImage = () => {
         <Space size={"middle"}>
           <Button
             icon={<RedoOutlined />}
-            onClick={() => getImagesByFilter(dispatch, location.search)}
+            onClick={() => getImagesByFilter(dispatch, location.search ? location.search : `?page=1&limit=${filter.limit}`)}
           >
             Refresh
           </Button>
@@ -135,10 +182,11 @@ const ManageImage = () => {
         </Space>
       </Row>
       <Row justify={"end"}>
-        <Col span={10}>
+        <Col span={12}>
           <Input.Search
-            placeholder="input search product id...."
-            onChange={handleSearch}
+            placeholder="input search product id, name, slug..."
+            onChange={(e) => handleChange("search", e)}
+            defaultValue={search}
             allowClear
             enterButton
           />
@@ -148,8 +196,13 @@ const ManageImage = () => {
       <Table
         columns={columns}
         dataSource={images}
-        pagination={{ pageSize: 6 }}
         loading={loading}
+        pagination={{
+          pageSize: filter.limit ? filter.limit : 4,
+          current: page ? +page : 1,
+          total: pagination?.total,
+          onChange: (e) => handleChange("pagination", e)
+        }}
       />
 
       <ImageDrawer
@@ -157,6 +210,7 @@ const ManageImage = () => {
         onClose={() => setIsDrawerOpen(false)}
         action={action}
         data={updateData}
+        limit={filter.limit}
       />
 
       <Modal
@@ -167,7 +221,7 @@ const ManageImage = () => {
         confirmLoading={isFetching}
         style={{ top: 20 }}
       >
-        <p>Do you want to delete brand ?</p>
+        <p>Do you want to delete image ?</p>
       </Modal>
     </Space>
   )

@@ -1,6 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit'
 
-const items = localStorage.getItem('cartItems') !== null ? JSON.parse(localStorage.getItem('cartItems')) : []
+const items = JSON.parse(localStorage.getItem('cartItems')) || []
 
 const initialState = {
     value: items,
@@ -12,10 +12,10 @@ export const cartItemsSlice = createSlice({
     reducers: {
         addItem: (state, action) => {
             let newItem = action.payload
-            let duplicate = state.value.filter(item => item.variants_id === newItem.variants_id && item.color.title === newItem.color.title)
+            let duplicate = state.value.filter(item => item.variants_id === newItem.variants_id && item.color.label === newItem.color.label)
             if(duplicate.length > 0) {
                 state.value = state.value.map(item => {
-                    if(item.id === newItem.id && item.color.title === newItem.color.title) {
+                    if(item.id === newItem.id && item.color.label === newItem.color.label) {
                         return {...item, quantity: newItem.quantity + duplicate[0].quantity}
                     } else {
                         return {...item}
@@ -29,13 +29,13 @@ export const cartItemsSlice = createSlice({
 
         updateItem: (state, action) => {
             let newItem = action.payload
-            let items = state.value.filter(item => item.variants_id === newItem.variants_id)
-            if(items.length > 0) {
-                state.value = state.value.map(item => {
-                    if(item.id === newItem.id && item.color.title === newItem.color.title) {
-                        return {...item, quantity: newItem.quantity}
+            let currentItem = state.value.filter(item => item.variants_id === newItem.variants_id)
+            if(currentItem.length > 0) {
+                state.value = state.value.map(e => {
+                    if(e.id === newItem.id && e.color.label === newItem.color.label) {
+                        return {...e, quantity: newItem.quantity}
                     } else {
-                        return {...item}
+                        return {...e}
                     }
                 })
             }
@@ -48,7 +48,7 @@ export const cartItemsSlice = createSlice({
                 if(e.variants_id !== item.variants_id) {
                     return e
                 }
-                if(e.variants_id === item.variants_id && e.color.title !== item.color.title) {
+                if(e.variants_id === item.variants_id && e.color.label !== item.color.label) {
                     return e
                 }
             })

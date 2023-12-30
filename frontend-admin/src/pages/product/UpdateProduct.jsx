@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { Space, Row, Col, Button, Form, Input, Upload, Select, Typography } from 'antd'
 import { UploadOutlined } from '@ant-design/icons'
 
@@ -11,10 +11,9 @@ import { getProductsByFilter } from '../../redux/product/productRequest'
 const UpdateProduct = (props) => {
 
     const dispatch = useDispatch()
-    let [searchParams, setSearchParams] = useSearchParams();
     const [form] = Form.useForm()
+    const location = useLocation()
 
-    // const product = props.data
     const brands = props.brands.filter(item => item.category_id === props.data.category_id)
     const attributes = props.attributes.filter(item => item.category_id === props.data.category_id)
 
@@ -42,15 +41,6 @@ const UpdateProduct = (props) => {
         fileList: fileList
     }
 
-    const checkSearchParams = (categoryId) => {
-        const params = searchParams.get("categoryId")
-        if (categoryId === Number(params)) {
-            getProductsByFilter(dispatch, location.search)
-        } else {
-            setSearchParams({ categoryId: categoryId })
-        }
-    }
-
     const handlePostData = async (values) => {
         // console.log(values);
         const formData = new FormData()
@@ -70,30 +60,43 @@ const UpdateProduct = (props) => {
             formData.append("thumbnail", values.thumbnail.file)
         }
 
-        setIsFetching(true)
-        const res = await productApi.updateProduct(props.data.id, formData)
-        if (res.st === 1) {
+        try {
+            setIsFetching(true)
+            const res = await productApi.updateProduct(props.data.id, formData)
+            if (res.st === 1) {
+                dispatch(openNotification(
+                    { type: "success", message: res.msg, duration: 2, open: true }
+                ))
+                setIsFetching(false)
+                props.onClose()
+                await getProductsByFilter(dispatch, location.search ? location.search : `?page=1&limit=${props.limit}`)
+            } else {
+                dispatch(openNotification(
+                    { type: "error", message: res.msg, duration: 2, open: true }
+                ))
+                setIsFetching(false)
+            }
+        } catch(err) {
             dispatch(openNotification(
-                { type: "success", message: res.msg, duration: 2, open: true }
-            ))
-            setIsFetching(false)
-            checkSearchParams(values.category_id)
-            props.onClose()
-        } else {
-            dispatch(openNotification(
-                { type: "error", message: res.msg, duration: 2, open: true }
+                { type: "error", message: "Something wrong!", duration: 2, open: true }
             ))
             setIsFetching(false)
         }
     }
 
     const fetchProduct = async () => {
-        const res = await productApi.getProductsByFilter(`?productId=${props.data.id}`)
-        if (res.st === 1) {
-            setProduct(res.data)
-        } else {
+        try {
+            const res = await productApi.getProductsByFilter(`?productId=${props.data.id}`)
+            if (res.st === 1) {
+                setProduct(res.data)
+            } else {
+                dispatch(openNotification(
+                    { type: "error", message: res.msg, duration: 2, open: true }
+                ))
+            }
+        } catch(err) {
             dispatch(openNotification(
-                { type: "error", message: res.msg, duration: 2, open: true }
+                { type: "error", message: "Something wrong!", duration: 2, open: true }
             ))
         }
     }
@@ -198,7 +201,7 @@ const UpdateProduct = (props) => {
                         <Select
                             placeholder="Please Select..."
                             style={{ textTransform: "capitalize" }}
-                            options={[{ value: props.data.category_id, label: props.data.category_name }]}
+                            options={[{ value: props.data.category_id, label: props.data.category_label }]}
                         />
                     </Form.Item>
 
@@ -210,7 +213,7 @@ const UpdateProduct = (props) => {
                             rules={[
                                 {
                                     required: true,
-                                    message: 'Please input your brand!',
+                                    message: 'Please input your value!',
                                 },
                             ]}
                         >
@@ -231,18 +234,12 @@ const UpdateProduct = (props) => {
                                         <Form.Item
                                             label={item.label}
                                             name={item.label}
-                                            rules={[
-                                                {
-                                                    required: true,
-                                                    message: 'Please input your value!',
-                                                },
-                                            ]}
                                         >
                                             <Select
                                                 placeholder="Please Select..."
                                                 mode='multiple'
                                                 allowClear
-                                                options={item.data.map(item => {
+                                                options={item.data?.map(item => {
                                                     return { label: item.label, value: item.id }
                                                 })}
                                                 style={{ textTransform: "capitalize" }}

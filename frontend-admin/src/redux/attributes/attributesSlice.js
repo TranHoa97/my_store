@@ -24,6 +24,7 @@ export const attributesSlice = createSlice({
         getAttributesSuccess: (state, action) => {
             state.attributes.isFetching = false
             state.attributes.value = action.payload
+            state.attributes.error = false
         },
         getAttributesFailed: (state) => {
             state.attributes.isFetching = false
@@ -37,6 +38,7 @@ export const attributesSlice = createSlice({
         getAttributesValueSuccess: (state, action) => {
             state.value.isFetching = false
             state.value.value = action.payload
+            state.attributes.error = false
         },
         getAttributesValueFailed: (state) => {
             state.value.isFetching = false

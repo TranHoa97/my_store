@@ -16,6 +16,7 @@ export const orderSlice = createSlice({
         getOrderSuccess: (state, action) => {
             state.isFetching = false
             state.value = action.payload
+            state.error = false
         },
         getOrderFailed: (state) => {
             state.isFetching = false

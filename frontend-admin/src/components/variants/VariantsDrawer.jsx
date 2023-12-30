@@ -6,7 +6,7 @@ import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
 
 import variantsApi from '../../services/VariantsApi';
 import { openNotification } from '../../redux/slice/notificationSlice';
-import { getAllVariants, getVariantsByProduct } from '../../redux/variants/variantsRequest';
+import { getVariantByFilter } from '../../redux/variants/variantsRequest';
 
 const { TextArea } = Input;
 
@@ -19,38 +19,45 @@ const VariantsDrawer = (props) => {
     const [isFetching, setIsFetching] = useState(false)
 
     const handlePostData = async (values) => {
-        console.log(values);
-        setIsFetching(true)
-        if (props.action === "create") {
-            const res = await variantsApi.createVariants({ ...values, product_id: params.slug })
-            if (res.st === 1) {
-                dispatch(openNotification(
-                    { type: "success", message: res.msg, duration: 2, open: true }
-                ))
-                setIsFetching(false)
-                props.onClose()
-                await getVariantsByProduct(dispatch, params.slug)
+        // console.log(values);
+        try {
+            setIsFetching(true)
+            if (props.action === "create") {
+                const res = await variantsApi.createVariants({ ...values, product_id: params.slug })
+                if (res.st === 1) {
+                    dispatch(openNotification(
+                        { type: "success", message: res.msg, duration: 2, open: true }
+                    ))
+                    setIsFetching(false)
+                    props.onClose()
+                    await getVariantByFilter(dispatch, `?productId=${params.slug}`)
+                } else {
+                    dispatch(openNotification(
+                        { type: "error", message: res.msg, duration: 2, open: true }
+                    ))
+                    setIsFetching(false)
+                }
             } else {
-                dispatch(openNotification(
-                    { type: "error", message: res.msg, duration: 2, open: true }
-                ))
-                setIsFetching(false)
+                const res = await variantsApi.updateVariants(props.data.id, values)
+                if (res.st === 1) {
+                    dispatch(openNotification(
+                        { type: "success", message: res.msg, duration: 2, open: true }
+                    ))
+                    setIsFetching(false)
+                    props.onClose()
+                    await getVariantByFilter(dispatch, `?productId=${params.slug}`)
+                } else {
+                    dispatch(openNotification(
+                        { type: "error", message: res.msg, duration: 2, open: true }
+                    ))
+                    setIsFetching(false)
+                }
             }
-        } else {
-            const res = await variantsApi.updateVariants(props.data.id, values)
-            if (res.st === 1) {
-                dispatch(openNotification(
-                    { type: "success", message: res.msg, duration: 2, open: true }
-                ))
-                setIsFetching(false)
-                props.onClose()
-                await getVariantsByProduct(dispatch, params.slug)
-            } else {
-                dispatch(openNotification(
-                    { type: "error", message: res.msg, duration: 2, open: true }
-                ))
-                setIsFetching(false)
-            }
+        } catch (err) {
+            dispatch(openNotification(
+                { type: "error", message: "Something wrong!", duration: 2, open: true }
+            ))
+            setIsFetching(false)
         }
     }
 
@@ -59,21 +66,21 @@ const VariantsDrawer = (props) => {
             form.resetFields()
         } else {
             if (props.data) {
-                const { title, slug, price, quantity, sold, description, ram, storage, colors } = props.data
+                const { title, slug, price, quantity, sold, description, ram, storage, colors, cpu, display, graphics, weight } = props.data
                 form.setFieldsValue({
                     title: title,
                     slug: slug,
-                    price: Number(price),
-                    quantity: Number(quantity),
-                    sold: Number(sold),
+                    price: +(price),
+                    quantity: +(quantity),
+                    sold: +(sold),
                     description: description,
-                    cpu: props.data.cpu,
-                    display: props.data.display,
-                    graphics: props.data.graphics,
-                    wieght: props.data.weight,
+                    cpu: cpu,
+                    display: display,
+                    graphics: graphics,
+                    weight: weight,
                     ram: ram,
                     storage: storage,
-                    colors: colors.map(item => item.title)
+                    colors: colors.map(item => item.label)
                 })
             }
         }
@@ -170,48 +177,10 @@ const VariantsDrawer = (props) => {
                         <TextArea rows={8} />
                     </Form.Item>
 
-                    {/* CPU */}
-                    <Form.Item
-                        label="Cpu:"
-                        name="cpu"
-                    >
-                        <Input placeholder="ram..." />
-                    </Form.Item>
-
-                    {/* DISPLAY */}
-                    <Form.Item
-                        label="Display:"
-                        name="display"
-                    >
-                        <Input placeholder="ram..." />
-                    </Form.Item>
-
-                    {/* GRAPHICS */}
-                    <Form.Item
-                        label="Graphics:"
-                        name="graphics"
-                    >
-                        <Input placeholder="ram..." />
-                    </Form.Item>
-
-                    {/* WEIGHT */}
-                    <Form.Item
-                        label="Weight:"
-                        name="weight"
-                    >
-                        <Input placeholder="ram..." />
-                    </Form.Item>
-
                     {/* RAM */}
                     <Form.Item
                         label="Ram:"
                         name="ram"
-                        rules={[
-                            {
-                                required: true,
-                                message: 'Please input your value!',
-                            },
-                        ]}
                     >
                         <Input placeholder="ram..." />
                     </Form.Item>
@@ -220,14 +189,40 @@ const VariantsDrawer = (props) => {
                     <Form.Item
                         label="Storage:"
                         name="storage"
-                        rules={[
-                            {
-                                required: true,
-                                message: 'Please input your value!',
-                            },
-                        ]}
                     >
                         <Input placeholder="storage..." />
+                    </Form.Item>
+
+                    {/* CPU */}
+                    <Form.Item
+                        label="Cpu:"
+                        name="cpu"
+                    >
+                        <Input placeholder="cpu..." />
+                    </Form.Item>
+
+                    {/* DISPLAY */}
+                    <Form.Item
+                        label="Display:"
+                        name="display"
+                    >
+                        <Input placeholder="display..." />
+                    </Form.Item>
+
+                    {/* GRAPHICS */}
+                    <Form.Item
+                        label="Graphics:"
+                        name="graphics"
+                    >
+                        <Input placeholder="graphics..." />
+                    </Form.Item>
+
+                    {/* WEIGHT */}
+                    <Form.Item
+                        label="Weight:"
+                        name="weight"
+                    >
+                        <Input placeholder="weight..." />
                     </Form.Item>
 
                     {/* COLORS */}
@@ -239,13 +234,16 @@ const VariantsDrawer = (props) => {
                                 <Row style={{ paddingBottom: "8px" }}>Colors:</Row>
                                 {fields.map((field) => (
                                     <Form.Item
-                                        required={false}
                                         key={field.key}
+                                        required={false}
                                     >
                                         <Form.Item
                                             {...field}
                                             validateTrigger={['onChange', 'onBlur']}
                                             noStyle
+                                            rules={[
+                                                { required: true, message: "Please select your value!" },
+                                            ]}
                                         >
                                             <Input
                                                 placeholder="passenger name"

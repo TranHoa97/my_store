@@ -1,8 +1,11 @@
 import axiosClient from "./AxiosClient"
 
 const groupApi = {
-    getAllGroups() {
-        const url = `/group/read`
+    getGroupByFilter(query) {
+        let url = `/group/read`
+        if(query) {
+            url += `${query}`
+        }
         return axiosClient.get(url)
     },
     createGroup(data) {

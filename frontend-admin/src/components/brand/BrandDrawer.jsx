@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useDispatch } from 'react-redux'
-import { useLocation, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { Space, Button, Form, Input, Drawer, Select } from 'antd'
 
 import { openNotification } from '../../redux/slice/notificationSlice'
@@ -12,52 +12,63 @@ const BrandDrawer = (props) => {
     const [form] = Form.useForm()
     const dispatch = useDispatch()
     const location = useLocation()
-    let [searchParams, setSearchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams()
 
     const [isFetching, setIsFetching] = useState(false)
 
-    const checkSearchParams = (id) => {
-        const params = searchParams.get("category")
-        if(Number(params) === id) {
-            getBrandsByFilter(dispatch, location.search)
+    const checkParams = (categoryId) => {
+        const category = searchParams.get("category")
+        if (categoryId === +category) {
+            getBrandsByFilter(dispatch, `?page=1&limit=${props.limit}&category=${categoryId}`)
         } else {
-            setSearchParams({ category: id })
+            setSearchParams({
+                page: 1,
+                limit: props.limit,
+                category: categoryId
+            })
         }
     }
 
     const handlePostData = async (values) => {
         // console.log(values);
-        setIsFetching(true)
-        if (props.action === "create") {
-            const res = await brandApi.createBrand(values)
-            if (res.st === 1) {
-                dispatch(openNotification(
-                    { type: "success", message: res.msg, duration: 2, open: true }
-                ))
-                checkSearchParams(values.category_id)
-                setIsFetching(false)
-                props.onClose()
+        try {
+            setIsFetching(true)
+            if (props.action === "create") {
+                const res = await brandApi.createBrand(values)
+                if (res.st === 1) {
+                    dispatch(openNotification(
+                        { type: "success", message: res.msg, duration: 2, open: true }
+                    ))
+                    setIsFetching(false)
+                    props.onClose()
+                    checkParams(values.category_id)
+                } else {
+                    setIsFetching(false)
+                    dispatch(openNotification(
+                        { type: "error", message: res.msg, duration: 2, open: true }
+                    ))
+                }
             } else {
-                dispatch(openNotification(
-                    { type: "error", message: res.msg, duration: 2, open: true }
-                ))
-                setIsFetching(false)
+                const res = await brandApi.updateBrand(props.data.id, values)
+                if (res.st === 1) {
+                    dispatch(openNotification(
+                        { type: "success", message: res.msg, duration: 2, open: true }
+                    ))
+                    setIsFetching(false)
+                    props.onClose()
+                    await getBrandsByFilter(dispatch, location.search ? location.search : `?page=1&limit=${props.limit}`)
+                } else {
+                    setIsFetching(false)
+                    dispatch(openNotification(
+                        { type: "error", message: res.msg, duration: 2, open: true }
+                    ))
+                }
             }
-        } else {
-            const res = await brandApi.updateBrand(props.data.id, values)
-            if (res.st === 1) {
-                dispatch(openNotification(
-                    { type: "success", message: res.msg, duration: 2, open: true }
-                ))
-                checkSearchParams(values.category_id)
-                setIsFetching(false)
-                props.onClose()
-            } else {
-                dispatch(openNotification(
-                    { type: "error", message: res.msg, duration: 2, open: true }
-                ))
-                setIsFetching(false)
-            }
+        } catch (err) {
+            setIsFetching(false)
+            dispatch(openNotification(
+                { type: "error", message: "Something wrong!", duration: 2, open: true }
+            ))
         }
     }
 
@@ -66,10 +77,11 @@ const BrandDrawer = (props) => {
             form.resetFields()
         } else {
             if (props.data) {
+                const { label, slug, category_id } = props.data
                 form.setFieldsValue({
-                    label: props.data.label,
-                    slug: props.data.slug,
-                    category_id: props.data.category_id
+                    label: label,
+                    slug: slug,
+                    category_id: category_id
                 })
             }
         }

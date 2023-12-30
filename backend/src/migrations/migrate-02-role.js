@@ -15,6 +15,12 @@ module.exports = {
       description: {
         type: Sequelize.STRING
       },
+      manage: {
+        type: Sequelize.STRING
+      },
+      action: {
+        type: Sequelize.STRING
+      },
       createdAt: {
         type: Sequelize.DATE,
         defaultValue: Sequelize.fn('NOW'),

@@ -23,28 +23,42 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(false)
 
   const fetchDataDashboard = async () => {
-    const res = await dashboardApi.getDataDashboard()
-    if (res.st === 1) {
-      setDashboard(res.data)
-    } else {
+    try {
+      const res = await dashboardApi.getDataDashboard()
+      if (res.st === 1) {
+        setDashboard(res.data)
+      } else {
+        dispatch(openNotification(
+          { type: "error", message: res.msg, duration: 2, open: true }
+        ))
+      }
+    } catch (err) {
       dispatch(openNotification(
-        { type: "error", message: res.msg, duration: 2, open: true }
+        { type: "error", message: "Something wrong!", duration: 2, open: true }
       ))
+      setLoading(false)
     }
   }
 
   const fetchRecentOrders = async () => {
-    setLoading(true)
-    const res = await dashboardApi.getRecentOrders()
-    if (res.st === 1) {
-      const results = res.data.map((item, index) => {
-        return { ...item, key: index + 1 }
-      })
-      setRecentOrders(results)
-      setLoading(false)
-    } else {
+    try {
+      setLoading(true)
+      const res = await dashboardApi.getRecentOrders()
+      if (res.st === 1) {
+        const results = res.data.map((item, index) => {
+          return { ...item, key: index + 1 }
+        })
+        setRecentOrders(results)
+        setLoading(false)
+      } else {
+        dispatch(openNotification(
+          { type: "error", message: res.msg, duration: 2, open: true }
+        ))
+        setLoading(false)
+      }
+    } catch (err) {
       dispatch(openNotification(
-        { type: "error", message: res.msg, duration: 2, open: true }
+        { type: "error", message: "Something wrong!", duration: 2, open: true }
       ))
       setLoading(false)
     }
@@ -129,7 +143,7 @@ const Dashboard = () => {
           />
         </Col>
       </Row>
-      
+
       <Typography.Title level={5}>Recent Orders</Typography.Title>
       <Row>
         <Col span={24}>

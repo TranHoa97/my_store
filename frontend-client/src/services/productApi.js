@@ -21,8 +21,11 @@ const productApi = {
         return axiosClient.get(url)
     },
 
-    getCollections(category, limit, query) {
-        const url = `/store/collections${query}&category=${category}&limit=${limit}`
+    getCollections(category, query) {
+        let url = `/store/collections`
+        if(query) {
+            url += `${query}&category=${category}`
+        }
         return axiosClient.get(url)
     },
 

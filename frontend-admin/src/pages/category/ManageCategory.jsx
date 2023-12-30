@@ -1,47 +1,70 @@
 import React, { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
-import { Space, Button, Table, Row, Modal, Typography } from 'antd'
+import { Space, Button, Table, Row, Modal, Typography, Col, Input } from 'antd'
 import { PlusOutlined, RedoOutlined } from '@ant-design/icons'
+import { debounce } from 'lodash'
 
 import CategoryDrawer from '../../components/category/CategoryDrawer'
 import categoryApi from '../../services/CategoryApi'
-import { getAllCategories } from '../../redux/category/categoryRequest'
+import { getCategoryByFilter } from '../../redux/category/categoryRequest'
 import { openNotification } from '../../redux/slice/notificationSlice'
 import { setMenu } from '../../redux/slice/menuSiderSlice'
+import { formatDate } from '../../ultis/formatDate'
 
 const ManageCategory = () => {
 
     const dispatch = useDispatch()
     const navigate = useNavigate()
+    const location = useLocation()
+    let [searchParams, setSearchParams] = useSearchParams();
+    const page = searchParams.get("page")
+    const search = searchParams.get("search")
 
     const isFetching = useSelector(state => state.category.isFetching)
-    const categories = useSelector(state => state.category.value)?.map((item, index) => {
+    const categories = useSelector(state => state.category.value?.data)?.map((item, index) => {
         return { ...item, key: index + 1 }
     })
+    const pagination = useSelector(state => state.category.value?.pagination)
     const account = useSelector(state => state.auth.login.value).groupWithRoles.roles
 
     const [isDrawerOpen, setIsDrawerOpen] = useState(false)
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [action, setAction] = useState(null)
-    const [category, setCategory] = useState(null)
+    const [updateData, setUpdateData] = useState(null)
     const [loading, setLoading] = useState(null)
+    const [filter, setFilter] = useState({
+        page: page ? +page : 1,
+        limit: 4
+    })
 
     const columns = [
         {
-            title: 'No',
-            dataIndex: 'key',
-            key: 'key',
+            title: 'CategoryId',
+            dataIndex: 'id',
+        },
+        {
+            title: 'Image',
+            dataIndex: 'image_url',
+            render: (url) => <img style={{ width: "50px" }} src={url} alt="image" />
+        },
+        {
+            title: 'Icon',
+            dataIndex: 'icon_url',
+            render: (url) => <img style={{ width: "50px" }} src={url} alt="icon" />
         },
         {
             title: 'Category Name',
             dataIndex: 'label',
-            key: 'label',
             render: (text) => <div style={{ textTransform: "capitalize" }}>{text}</div>
         },
         {
+            title: "UpdatedAt",
+            dataIndex: "updatedAt",
+            render: (text) => <div>{formatDate(text)}</div>
+        },
+        {
             title: 'Action',
-            key: 'action',
             render: (_, record) => (
                 <Space size="middle">
                     <a onClick={() => showDrawer("update", record)}>Update</a>
@@ -51,45 +74,98 @@ const ManageCategory = () => {
         },
     ]
 
-    const showDrawer = (action, category) => {
-        const checkPermission = account.find(item => item.url === "/category/create" || item.url === "/category/update")
-        if(checkPermission) {
+    const showDrawer = (action, record) => {
+        const checkPermissionCreate = account.find(item => item.url === "/category/create")
+        const checkPermissionUpdate = account.find(item => item.url === "/category/update")
+        if (checkPermissionCreate) {
             setIsDrawerOpen(true)
             setAction(action)
-            setCategory(category)
+        } else {
+            navigate(`/error/403`)
+        }
+        if (checkPermissionUpdate) {
+            setIsDrawerOpen(true)
+            setAction(action)
+            setUpdateData(record)
         } else {
             navigate(`/error/403`)
         }
     }
 
     const showModal = (record) => {
-        setIsModalOpen(true)
-        setCategory(record)
+        const checkPermissionDelete = account.find(item => item.url === "/category/delete")
+        if (checkPermissionDelete) {
+            setIsModalOpen(true);
+            setUpdateData(record)
+        } else {
+            navigate(`/error/403`)
+        }
     }
 
+    const handleChange = debounce(async (type, e) => {
+        let newFilter = filter
+        switch (type) {
+            case "pagination":
+                setFilter({ ...filter, page: e })
+                newFilter = { ...filter, page: e }
+                break;
+            case "search":
+                let keyword = e.target.value
+                if (keyword) {
+                    setFilter({ ...filter, page: 1, search: keyword })
+                    newFilter = { ...filter, page: 1, search: keyword }
+                } else {
+                    let { search, ...others } = filter
+                    setFilter({ ...others, page: 1 })
+                    newFilter = { ...others, page: 1 }
+                }
+                break;
+        }
+        setSearchParams(newFilter)
+    }, 500)
+
     const handleDelete = async () => {
-        setLoading(true)
-        const res = await categoryApi.deleteCateogry(category.id)
-        if (res.st === 1) {
+        try {
+            setLoading(true)
+            const res = await categoryApi.deleteCateogry(updateData.id)
+            if (res.st === 1) {
+                setLoading(false)
+                setIsModalOpen(false)
+                dispatch(openNotification(
+                    { type: "success", message: res.msg, duration: 2, open: true }
+                ))
+                if (+page === 1) {
+                    await getCategoryByFilter(dispatch, `?page=1&limit=${filter.limit}`)
+                } else {
+                    setSearchParams({ page: 1, limit: filter.limit })
+                }
+            } else {
+                setLoading(false)
+                setIsModalOpen(false)
+                dispatch(openNotification(
+                    { type: "error", message: res.msg, duration: 2, open: true }
+                ))
+            }
+        } catch (err) {
             setLoading(false)
             setIsModalOpen(false)
             dispatch(openNotification(
-                { type: "success", message: res.msg, duration: 2, open: true }
-            ))
-            await getAllCategories(dispatch)
-        } else {
-            setLoading(false)
-            setIsModalOpen(false)
-            dispatch(openNotification(
-                { type: "error", message: res.msg, duration: 2, open: true }
+                { type: "error", message: "Something wrong!", duration: 2, open: true }
             ))
         }
     }
 
     useEffect(() => {
         dispatch(setMenu(["7"]))
-        getAllCategories(dispatch)
     }, [])
+
+    useEffect(() => {
+        if (location.search) {
+            getCategoryByFilter(dispatch, location.search)
+        } else {
+            getCategoryByFilter(dispatch, `?page=1&limit=${filter.limit}`)
+        }
+    }, [searchParams])
 
     return (
         <Space direction={"vertical"} size={"middle"} style={{ width: "100%" }}>
@@ -98,7 +174,7 @@ const ManageCategory = () => {
                 <Space size={"middle"}>
                     <Button
                         icon={<RedoOutlined />}
-                        onClick={() => getAllCategories(dispatch)}
+                        onClick={() => getCategoryByFilter(dispatch, location.search ? location.search : `?page=1&limit=${filter.limit}`)}
                     >
                         Refresh
                     </Button>
@@ -112,18 +188,36 @@ const ManageCategory = () => {
                 </Space>
             </Row>
 
+            <Row justify={"end"}>
+                <Col span={12}>
+                    <Input.Search
+                        placeholder="input search category label, slug, id..."
+                        onChange={(e) => handleChange("search", e)}
+                        defaultValue={search}
+                        allowClear
+                        enterButton
+                    />
+                </Col>
+            </Row>
+
             <Table
                 columns={columns}
                 dataSource={categories}
-                pagination={{ pageSize: 8 }}
                 loading={isFetching}
+                pagination={{
+                    pageSize: filter.limit ? filter.limit : 8,
+                    current: page ? +page : 1,
+                    total: pagination?.total,
+                    onChange: (e) => handleChange("pagination", e)
+                }}
             />
 
             <CategoryDrawer
                 open={isDrawerOpen}
                 onClose={() => setIsDrawerOpen(false)}
                 action={action}
-                data={category}
+                data={updateData}
+                limit={filter.limit}
             />
 
             <Modal
@@ -134,7 +228,7 @@ const ManageCategory = () => {
                 confirmLoading={loading}
                 style={{ top: 20 }}
             >
-                <p>Do you want to delete brand ?</p>
+                <p>Do you want to delete category ?</p>
             </Modal>
         </Space>
     )

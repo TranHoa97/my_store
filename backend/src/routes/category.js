@@ -1,21 +1,22 @@
 import express from "express"
+import upload from "../middleware/multer"
 import categoryController from "../controller/categoryController"
-import auth from "../middleware/auth"
+import { checkUserJwt, checkUserPermisson } from "../middleware/auth"
 
 const router = express.Router()
 
 const categoryRoute = (app) => {
     // GET
-    router.get("/read", auth.checkUserJwt, auth.checkUserPermisson, categoryController.getCategories)
+    router.get("/read", checkUserJwt, checkUserPermisson, categoryController.getCategories)
 
     // CREATE
-    router.post("/create", auth.checkUserJwt, auth.checkUserPermisson, categoryController.createCategory)
+    router.post("/create", checkUserJwt, checkUserPermisson, upload.any(), categoryController.createCategory)
 
     // UPDATE
-    router.put("/update", auth.checkUserJwt, auth.checkUserPermisson, categoryController.updateCategory)
+    router.put("/update", checkUserJwt, checkUserPermisson, upload.any(), categoryController.updateCategory)
 
     // DELETE
-    router.delete("/delete", auth.checkUserJwt, auth.checkUserPermisson, categoryController.deleteCategory)
+    router.delete("/delete", checkUserJwt, checkUserPermisson, categoryController.deleteCategory)
 
     return app.use("/category", router)
 }

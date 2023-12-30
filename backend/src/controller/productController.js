@@ -5,9 +5,9 @@ require("dotenv").config()
 const productController = {
     getProducts: async (req, res) => {
         try {
-            const { productId, categoryId, search } = req.query
+            const { productId, category, search, page, limit } = req.query
 
-            if(productId) {
+            if (productId) {
                 let sql = `select
                 product.*,
                 JSON_ARRAYAGG(
@@ -35,31 +35,56 @@ const productController = {
 
             let sql = `select 
                 product.*, 
-                category.label as category_name,
+                category.label as category_label,
                 count(variant.id) as total_variant
                 from product
                 left join category on product.category_id = category.id
                 left join variant on variant.product_id = product.id
                 where product.id is not null`
 
-            if (categoryId) {
-                sql += ` and product.category_id = ${categoryId}`
+            let sqlTotal = `select count(*) as count from product where id is not null`
+
+            if (category) {
+                sql += ` and product.category_id = ${category}`
+                sqlTotal += ` and category_id = ${category}`
             }
 
             if (search) {
-                const newSearch = search.toLowerCase().replaceAll("-", " ")
-                sql += ` and (product.title like "%${newSearch}%" 
-                or product.id like "%${newSearch}%")`
+                sql += ` and (product.title like "%${search}%" 
+                or product.id like "%${search}%"
+                or product.slug like "%${search}%")`
+
+                sqlTotal += ` and (product.title like "%${search}%" 
+                or product.id like "%${search}%"
+                or product.slug like "%${search}%")`
             }
 
             sql += ` group by product.id`
 
+            if (limit) {
+                sql += ` limit ${limit}`
+            }
+
+            if (page) {
+                const offset = (page - 1) * limit
+                sql += ` offset ${offset}`
+            }
+
             const [products] = await db.execute(sql)
+
+            const [totalProduct] = await db.execute(sqlTotal)
 
             return res.status(200).json({
                 st: 1,
                 msg: "Get products successfully!",
-                data: products.length > 0 ?  products : []
+                data: {
+                    data: products.length > 0 ? products : [],
+                    pagination: {
+                        limit: +limit,
+                        page: +page,
+                        total: +(totalProduct[0]?.count)
+                    }
+                }
             })
 
         } catch (err) {
@@ -75,7 +100,7 @@ const productController = {
             const { title, slug, category_id, brand_id, attributes } = req.body
 
             // Validation
-            if (!title || !slug || !category_id || !brand_id || !attributes) {
+            if (!title || !slug || !category_id || !brand_id) {
                 return res.status(200).json({
                     st: 0,
                     msg: "Missing params!"
@@ -114,12 +139,15 @@ const productController = {
             )
 
             // Insert product_attribute
-            const newAttributes = attributes.split(",").map(item => {
-                return `(${insertProduct.insertId}, ${item})`
-            })
-            await db.execute(
-                `insert into product_attribute (product_id, value_id) values ${newAttributes.toString()}`
-            )
+            if (attributes && attributes.length > 0) {
+                const newAttributes = attributes.split(",").filter(item => item !== "")
+                const results = newAttributes.map(item => {
+                    return `(${insertProduct.insertId}, ${item})`
+                })
+                await db.execute(
+                    `insert into product_attribute (product_id, value_id) values ${results.toString()}`
+                )
+            }
 
             // Insert image
             const newImages = upImages.map(item => {
@@ -136,6 +164,7 @@ const productController = {
             })
 
         } catch (err) {
+            console.log(err);
             return res.status(500).json({
                 st: 0,
                 msg: err.message
@@ -150,7 +179,7 @@ const productController = {
             const { title, slug, brand_id, thumbname, attributes } = req.body
 
             // Validation
-            if (!id || !title || !slug || !brand_id || !attributes) {
+            if (!id || !title || !slug || !brand_id) {
                 return res.status(200).json({
                     st: 0,
                     msg: "Missing params!"
@@ -179,19 +208,22 @@ const productController = {
                 )
             }
 
-            // Update attributes product
-            const newAttributes = attributes.split(",").map(item => {
-                return `(${id}, ${item})`
-            })
-            // Delete old value_id from product_attribute table
-            await db.execute(
-                `delete from product_attribute where product_id = ${id}`
-            )
-            // Insert new value_id from product_attribute table
-            await db.execute(
-                `insert into product_attribute (product_id, value_id)
-                values ${newAttributes.toString()}`
-            )
+            if (attributes && attributes.length > 0) {
+                // Update attributes product
+                const newAttributes = attributes.split(",").filter(item => item !== "")
+                const results = newAttributes.map(item => {
+                    return `(${id}, ${item})`
+                })
+                // Delete old value_id from product_attribute table
+                await db.execute(
+                    `delete from product_attribute where product_id = ${id}`
+                )
+                // Insert new value_id from product_attribute table
+                await db.execute(
+                    `insert into product_attribute (product_id, value_id)
+                    values ${results.toString()}`
+                )
+            }
 
             return res.status(200).json({
                 st: 1,
@@ -199,6 +231,7 @@ const productController = {
             })
 
         } catch (err) {
+            console.log(err);
             return res.status(500).json({
                 st: 0,
                 msg: err.message

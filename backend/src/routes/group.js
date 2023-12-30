@@ -1,21 +1,21 @@
 import express from "express"
 import groupController from "../controller/groupController"
-import auth from "../middleware/auth"
+import { checkUserJwt, checkUserPermisson } from "../middleware/auth"
 
 const router = express.Router()
 
 const groupRoute = (app) => {
     // GET
-    router.get("/read", auth.checkUserJwt, auth.checkUserPermisson, groupController.getGroups)
+    router.get("/read", checkUserJwt, checkUserPermisson, groupController.getGroups)
 
     // CREATE
-    router.post("/create", auth.checkUserJwt, auth.checkUserPermisson, groupController.createGroup)
+    router.post("/create", checkUserJwt, checkUserPermisson, groupController.createGroup)
     
     // UPDATE
-    router.put("/update", auth.checkUserJwt, auth.checkUserPermisson, groupController.updateGroup)
+    router.put("/update", checkUserJwt, checkUserPermisson, groupController.updateGroup)
     
     // DELETE
-    router.delete("/delete", auth.checkUserJwt, auth.checkUserPermisson, groupController.deleteGroup)
+    router.delete("/delete", checkUserJwt, checkUserPermisson, groupController.deleteGroup)
 
     return app.use("/group", router)
 }

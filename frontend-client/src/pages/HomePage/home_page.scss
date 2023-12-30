@@ -26,7 +26,7 @@
 
     &__category {
         padding: 5px;
-        @include flex(center, space-between);
+        @include flex(center, center);
         column-gap: 15px;
 
         &__item {
@@ -80,37 +80,39 @@
         }
     }
 
-    &__products {
+    &__product {
         padding: 10px 0;
 
         &__title {
             padding: 0 10px;
             margin-bottom: 18px;
-            font-size: 22px;
-            font-weight: 600;
-            color: #212529;
-            text-transform: uppercase;
+            @include flex(center, space-between);
+            p {
+                font-size: 22px;
+                font-weight: 600;
+                color: #212529;
+                text-transform: uppercase;
+            }
+        }
+
+        &__content {
+            @include flex(flex-start, center);
+
+            &__item {
+                width: 25%;
+            }
         }
     }
 
     @include tablet {
-        &__slider {
-            &__left {
-                width: 100%;
-            }
-
-            &__right {
-                display: none;
-            }
-        }
-
         &__category {
             padding: 0;
             flex-wrap: wrap;
             row-gap: 10px;
             column-gap: 0;
+
             &__item {
-                width: 25%;
+                width: 50%;
                 padding: 8px 4px 4px;
                 border: none;
                 &__image {
@@ -118,9 +120,24 @@
                     height: 48px;
                 }
             }
+
             img {
                 max-width: 35px;
                 max-height: 35px;
+            }
+        }
+        
+        &__product {
+            &__title {
+                p {
+                    font-size: 18px;
+                }
+            }
+            &__content {
+                flex-wrap: wrap;
+                &__item {
+                    width: 50%;
+                }
             }
         }
     }
@@ -141,8 +158,9 @@
             flex-wrap: wrap;
             row-gap: 10px;
             column-gap: 0;
+
             &__item {
-                width: 25%;
+                width: 50%;
                 padding: 8px 4px 4px;
                 border: none;
                 &__image {
@@ -150,9 +168,24 @@
                     height: 48px;
                 }
             }
+
             img {
                 max-width: 35px;
                 max-height: 35px;
+            }
+        }
+
+        &__product {
+            &__title {
+                p {
+                    font-size: 18px;
+                }
+            }
+            &__content {
+                flex-wrap: wrap;
+                &__item {
+                    width: 50%;
+                }
             }
         }
     }

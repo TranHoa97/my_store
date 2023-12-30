@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import Slider from 'react-slick'
 import ProductCard from '../ProductCard/ProductCard';
 
@@ -28,57 +28,49 @@ function SamplePrevArrow(props) {
 
 const SlickCarousel = (props) => {
 
-    const { 
-        slide, 
-        product, 
-        dots, 
-        mainSlideArrow, 
-        subSlideArrow, 
-        asNavFor, 
-        mainShow, 
-        responsive 
-    } = props
-    
-    const mainSlider = useRef(null)
-    const subSlider = useRef(null)
+    const { data, arrow, responsive, asNavFor, dots, show, product } = props
+
+    const [nav1, setNav1] = useState();
+    const [nav2, setNav2] = useState();
 
     let mainSettings = {
         dots: dots,
-        infinite: product && product.length > 3 ? true : false,
+        infinite: true,
         speed: 500,
-        slidesToShow: mainShow ? mainShow : 1,
+        slidesToShow: show || 1,
         slidesToScroll: 1,
-        arrows: mainSlideArrow,
+        arrows: arrow || true,
         nextArrow: <SampleNextArrow />,
         prevArrow: <SamplePrevArrow />,
         responsive: [
             {
-              breakpoint: 1024,
-              settings: {
-                slidesToShow: responsive ? responsive : 2,
-                slidesToScroll: 1,
-                infinite: false
-              }
+                breakpoint: 1024,
+                settings: {
+                    slidesToShow: responsive || 2,
+                    slidesToScroll: 1,
+                    infinite: true
+                }
             },
             {
-              breakpoint: 600,
-              settings: {
-                slidesToShow: responsive ? responsive : 1,
-                slidesToScroll: 1,
-                infinite: false
-              }
+                breakpoint: 600,
+                settings: {
+                    slidesToShow: responsive || 1,
+                    slidesToScroll: 1,
+                    infinite: true
+                }
             }
         ]
     }
 
     let subSettings = {
         dots: dots,
-        infinite: slide && slide.length > 3 ? true : false,
+        infinite: true,
         speed: 500,
         slidesToShow: 3,
         slidesToScroll: 1,
-        arrows: subSlideArrow,
+        arrows: arrow || true,
         swipeToSlide: true,
+        focusOnSelect: true,
         nextArrow: <SampleNextArrow />,
         prevArrow: <SamplePrevArrow />,
     }
@@ -88,20 +80,19 @@ const SlickCarousel = (props) => {
             <div className="slick-carousel__main">
                 <Slider
                     {...mainSettings}
-                    asNavFor={subSlider.current}
-                    ref={mainSlider}
+                    asNavFor={nav2} 
+                    ref={(slider1) => setNav1(slider1)}
                 >
                     {
-                        slide && slide.map((item,index) => (
-                            <div className="slick-carousel__main__item" key={index}>
-                                <img src={item.url || item.thumbnail} alt="" />
-                            </div>
-                        ))
-                    }
-                    {
-                        product && product.map((item, index) => (
-                            <div className="slick-carousel__main__item" key={index}>
-                                <ProductCard data={item} variants={false}/>
+                        data && data.map((item) => (
+                            <div className="slick-carousel__main__item" key={item.id}>
+                                {
+                                    product ? (
+                                        <ProductCard data={item} />
+                                    ) : (
+                                        <img src={item.url || item.thumbnail} alt="" />
+                                    )
+                                }
                             </div>
                         ))
                     }
@@ -109,17 +100,16 @@ const SlickCarousel = (props) => {
             </div>
 
             {
-                asNavFor && asNavFor ? (
+                asNavFor ? (
                     <div className="slick-carousel__sub">
                         <Slider
                             {...subSettings}
-                            asNavFor={mainSlider.current}
-                            ref={subSlider}
-                            focusOnSelect={true}
+                            asNavFor={nav1}
+                            ref={(slider2) => setNav2(slider2)}
                         >
                             {
-                                slide && slide.map((item,index) => (
-                                    <div className="slick-carousel__sub__item" key={index}>
+                                data && data.map((item) => (
+                                    <div className="slick-carousel__sub__item" key={item.id}>
                                         <img src={item.url} alt="" />
                                     </div>
                                 ))

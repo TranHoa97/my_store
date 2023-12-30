@@ -16,8 +16,25 @@
         margin-top: 20px;
         @include flex(flex-start, flex-start);
         flex-wrap: wrap;
+
         &__item {
             width: calc(100% / 4);
+        }
+    }
+
+    @include tablet {
+        &__list {
+            &__item {
+                width: calc(100% / 3);
+            }
+        }
+    }
+
+    @include mobile {
+        &__list {
+            &__item {
+                width: calc(100% / 2);
+            }
         }
     }
 }
